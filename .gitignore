@@ -59,3 +59,4 @@ dkms.conf
 *.ind
 /TWR_Demo/secure_bootloader/ses/Output/*
 /TWR_Demo/application/ses/Output/*
+/DW3XXX_API_rev9p3/API/Build_Platforms/nRF52833-DK/Output/*
