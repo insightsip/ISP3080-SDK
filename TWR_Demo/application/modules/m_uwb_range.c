@@ -416,10 +416,6 @@ uint32_t m_range_init(m_uwb_range_init_t *p_params, m_ble_service_handle_t *p_ha
     err_code = app_timer_create(&led_timer_id, APP_TIMER_MODE_SINGLE_SHOT, led_timeout_handler);
     VERIFY_SUCCESS(err_code);
 
-    // Initialize BLE range service
-    //err_code = range_service_init();
-    //VERIFY_SUCCESS(err_code);
-
     NRF_LOG_INFO("UWB role: %s", operating_role_name[operating_role]);
     sprintf(log1, "Src address: %x:%x:%x:%x:%x:%x:%x:%x",
         own_address[0], own_address[1], own_address[2], own_address[3],
