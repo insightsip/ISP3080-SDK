@@ -147,10 +147,18 @@ static void resp_msg_set_ts(uint8_t *ts_field, const uint64_t ts) {
 }
 
 static uint32_t uwb_wake_up(void) {
+    uint16_t wake_up_cpt =0;
+
     dwt_wakeup_ic();
 
+    /* Wait for device to wake up */
     while (is_uwb_sleeping) {
-    }; /* Wait for device to wake up */
+        nrf_delay_us(10);
+        wake_up_cpt++;
+        if (wake_up_cpt >= 200) {
+            return NRF_ERROR_INTERNAL;
+        }
+    }; 
 
     return NRF_SUCCESS;
 }
@@ -163,6 +171,8 @@ static void uwb_sleep(void) {
 /**@brief TX done event
  */
 static void cb_tx_done(const dwt_cb_data_t *txd) {
+    NRF_LOG_DEBUG("cb_tx_done event received");
+
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_RESPONDER: // TWR_RESPONDER
         m_last_range = -1;
@@ -182,11 +192,13 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
     srd_msg_dlsl rxmsg_ll;
     uint16_t rx_msg_length;
 
+    NRF_LOG_DEBUG("cb_rx_done event received");
+
     // Read Data Frame
     rx_msg_length = rxd->datalength;
     dwt_readrxdata((uint8_t *)&rxmsg_ll, rx_msg_length, 0);
 
-    // Check frame control bytes - must be 0x4188
+    // Check frame control bytes - must be 0x41dc
     if (rxmsg_ll.frameCtrl[0] != 0x41 || rxmsg_ll.frameCtrl[1] != 0xdc) {
         // unexpected frame control
         if (m_uwb_drv_range.sw_cfg.role == TWR_RESPONDER) {
@@ -208,7 +220,7 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
         {
             int32_t rtd_init, rtd_resp;
             float clock_offset_ratio;
-            float tof;
+            double tof;
 
             // Retrieve poll transmission and response reception timestamps.
             m_uwb_drv_range.sw_cfg.poll_rx_timestamp_u32 = dwt_readrxtimestamplo32();
@@ -311,6 +323,8 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
 /**@brief RX timeout event
  */
 static void cb_rx_to(const dwt_cb_data_t *rxd) {
+    NRF_LOG_DEBUG("cb_rx_to event received");
+
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_INITIATOR: // TWR_INITIATOR
         // go to sleep mode
@@ -340,6 +354,8 @@ static void cb_rx_to(const dwt_cb_data_t *rxd) {
 /**@brief RX error event
  */
 static void cb_rx_err(const dwt_cb_data_t *rxd) {
+     NRF_LOG_DEBUG("cb_rx_err event received");
+
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_INITIATOR: // TWR_INITIATOR
         // go to sleep mode
