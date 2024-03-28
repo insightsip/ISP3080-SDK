@@ -69,8 +69,12 @@
 /* UWB microsecond (uus) to device time unit (dtu, around 15.65 ps) conversion factor. 1 uus = 512 / 499.2 µs and 1 µs = 499.2 * 128 dtu. */
 #define UUS_TO_DWT_TIME 65536
 
-#define POLL_RX_TO_RESP_TX_DLY_UUS 520
-#define POLL_TX_TO_RESP_RX_DLY_UUS 240
+/* Delay between frames, in UWB microseconds. Should be fine tuned to optimize consumption */
+/* This is the delay from Frame RX timestamp to TX reply timestamp used for calculating/setting the DW3000's delayed TX function. (Used by Responder)*/
+#define POLL_RX_TO_RESP_TX_DLY_UUS 650
+/* This is the delay from the end of the frame transmission to the enable of the receiver, as programmed for the DW3000's wait for response feature. (Used by Initiator) */
+#define POLL_TX_TO_RESP_RX_DLY_UUS 340
+/* Receive response timeout. */
 #define RESP_RX_TIMEOUT_UUS 400
 
 /*Should be accurately calculated during calibration*/
