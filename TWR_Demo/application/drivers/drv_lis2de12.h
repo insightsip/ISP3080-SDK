@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 // I2C Address
-#define LISDDE12_ACC_I2C_ADDR 0xD4
+#define LISDDE12_ACC_I2C_ADDR 0x18
 
 #define WHO_AM_I_DEFAULT 0x33
 

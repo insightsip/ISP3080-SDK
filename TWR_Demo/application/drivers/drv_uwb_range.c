@@ -147,10 +147,18 @@ static void resp_msg_set_ts(uint8_t *ts_field, const uint64_t ts) {
 }
 
 static uint32_t uwb_wake_up(void) {
+    uint16_t wake_up_cpt =0;
+
     dwt_wakeup_ic();
 
+    /* Wait for device to wake up */
     while (is_uwb_sleeping) {
-    }; /* Wait for device to wake up */
+        nrf_delay_us(10);
+        wake_up_cpt++;
+        if (wake_up_cpt >= 200) {
+            return NRF_ERROR_INTERNAL;
+        }
+    }; 
 
     return NRF_SUCCESS;
 }
@@ -163,6 +171,8 @@ static void uwb_sleep(void) {
 /**@brief TX done event
  */
 static void cb_tx_done(const dwt_cb_data_t *txd) {
+    NRF_LOG_DEBUG("cb_tx_done event received");
+
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_RESPONDER: // TWR_RESPONDER
         m_last_range = -1;
@@ -182,12 +192,14 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
     srd_msg_dlsl rxmsg_ll;
     uint16_t rx_msg_length;
 
+    NRF_LOG_DEBUG("cb_rx_done event received");
+
     // Read Data Frame
     rx_msg_length = rxd->datalength;
     dwt_readrxdata((uint8_t *)&rxmsg_ll, rx_msg_length, 0);
 
-    // Check frame control bytes - must be 0x4188
-    if (rxmsg_ll.frameCtrl[0] != 0x41 || rxmsg_ll.frameCtrl[1] != 0x88) {
+    // Check frame control bytes - must be 0x41dc
+    if (rxmsg_ll.frameCtrl[0] != 0x41 || rxmsg_ll.frameCtrl[1] != 0xdc) {
         // unexpected frame control
         if (m_uwb_drv_range.sw_cfg.role == TWR_RESPONDER) {
             //immediate rx enable
@@ -208,7 +220,7 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
         {
             int32_t rtd_init, rtd_resp;
             float clock_offset_ratio;
-            float tof;
+            double tof;
 
             // Retrieve poll transmission and response reception timestamps.
             m_uwb_drv_range.sw_cfg.poll_rx_timestamp_u32 = dwt_readrxtimestamplo32();
@@ -311,6 +323,8 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
 /**@brief RX timeout event
  */
 static void cb_rx_to(const dwt_cb_data_t *rxd) {
+    NRF_LOG_DEBUG("cb_rx_to event received");
+
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_INITIATOR: // TWR_INITIATOR
         // go to sleep mode
@@ -340,6 +354,8 @@ static void cb_rx_to(const dwt_cb_data_t *rxd) {
 /**@brief RX error event
  */
 static void cb_rx_err(const dwt_cb_data_t *rxd) {
+     NRF_LOG_DEBUG("cb_rx_err event received");
+
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_INITIATOR: // TWR_INITIATOR
         // go to sleep mode
@@ -377,13 +393,13 @@ static void cb_spi_ready(const dwt_cb_data_t *cb_data) {
     /* Restore the required configurations on wake */
     dwt_restoreconfig();
 
-    //  dwt_settxantennadelay(TX_ANT_DLY);
-    //  dwt_setrxantennadelay(RX_ANT_DLY);
+    // dwt_settxantennadelay(TX_ANT_DLY);
+    // dwt_setrxantennadelay(RX_ANT_DLY);
 
     //set EUI as it will not be preserved unless the EUI is programmed and loaded from NVM
-    //dwt_entersleepaftertx(1);
-    //   dwt_setinterrupt(DWT_INT_TXFRS_BIT_MASK, NULL, 1); //re-enable the TX/RX interrupts
-    //  dwt_seteui(m_uwb_drv_range.sw_cfg.src_address);
+    // dwt_entersleepaftertx(1);
+    // dwt_setinterrupt(DWT_INT_TXFRS_BIT_MASK, NULL, 1); //re-enable the TX/RX interrupts
+     dwt_seteui(m_uwb_drv_range.sw_cfg.src_address);
 
     is_uwb_sleeping = 0; // device is awake
 }
@@ -443,7 +459,7 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     dwt_writesysstatuslo(DWT_INT_RCINIT_BIT_MASK | DWT_INT_SPIRDY_BIT_MASK);
 
     // Configure interrupts
-    dwt_setinterrupt(DWT_INT_TXFRS_BIT_MASK | DWT_INT_RXFCG_BIT_MASK | DWT_INT_RXFTO_BIT_MASK | DWT_INT_RXPTO_BIT_MASK | DWT_INT_RXPHE_BIT_MASK | DWT_INT_RXFCE_BIT_MASK | DWT_INT_RXFSL_BIT_MASK | DWT_INT_RXSTO_BIT_MASK,
+    dwt_setinterrupt(DWT_INT_ARFE_BIT_MASK | DWT_INT_TXFRS_BIT_MASK | DWT_INT_RXFCG_BIT_MASK | DWT_INT_RXFTO_BIT_MASK | DWT_INT_RXPTO_BIT_MASK | DWT_INT_RXPHE_BIT_MASK | DWT_INT_RXFCE_BIT_MASK | DWT_INT_RXFSL_BIT_MASK | DWT_INT_RXSTO_BIT_MASK,
         0, DWT_ENABLE_INT);
     dwt_setcallbacks(cb_tx_done, cb_rx_done, cb_rx_to, cb_rx_err, NULL, &cb_spi_ready, NULL);
 
@@ -485,7 +501,7 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
 
     // Pre fill initiator message
     init_msg.frameCtrl[0] = 0x41;
-    init_msg.frameCtrl[1] = 0x88;
+    init_msg.frameCtrl[1] = 0xdc;
     init_msg.seqNum = 0;
     init_msg.panID[0] = (0xdeca) & 0xff;
     init_msg.panID[1] = (0xdeca) >> 8;
@@ -495,7 +511,7 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
 
     // Pre fill responder message
     resp_msg.frameCtrl[0] = 0x41 /*frame type 0x1 == data*/ /*PID comp*/;
-    resp_msg.frameCtrl[1] = 0x88 /*dest extended address (64bits)*/ /*src extended address (64bits)*/;
+    resp_msg.frameCtrl[1] = 0xdc /*dest extended address (64bits)*/ /*src extended address (64bits)*/;
     resp_msg.seqNum = 0;
     resp_msg.panID[0] = (0xdeca) & 0xff;
     resp_msg.panID[1] = (0xdeca) >> 8;
