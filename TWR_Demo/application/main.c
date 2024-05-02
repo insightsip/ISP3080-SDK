@@ -35,6 +35,8 @@
 #include <stdint.h>
 #include <string.h>
 
+APP_TIMER_DEF(m_repeated_timer_id); 
+
 #define DEAD_BEEF 0xDEADBEEF /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 #define SCHED_MAX_EVENT_DATA_SIZE MAX(APP_TIMER_SCHED_EVENT_DATA_SIZE, NRF_SDH_BLE_GATT_MAX_MTU_SIZE) /**< Maximum size of scheduler events. */
@@ -266,13 +268,38 @@ void ble_mgmt_module_init(void) {
 
 /**@brief Function for application main entry.
  */
-int main(void) {
-    log_init();
 
-    // Initialize Power & Timer.
+static void repeated_timer_handler(void * p_context)
+{
+    static float accel_data[3] = {0};
+    //nrf_drv_gpiote_out_toggle(LED_1);
+    // drv_acc_get(data_l);
+    //NRF_LOG_INFO("timer expired: %d", count);
+    NRF_LOG_INFO("x = " NRF_LOG_FLOAT_MARKER " m/s*s", NRF_LOG_FLOAT(accel_data[0]));
+    NRF_LOG_INFO("y = " NRF_LOG_FLOAT_MARKER " m/s*s", NRF_LOG_FLOAT(accel_data[1]));
+    NRF_LOG_INFO("z = " NRF_LOG_FLOAT_MARKER " m/s*s", NRF_LOG_FLOAT(accel_data[2]));
+    //count+= 0.1;
+}
+
+int main(void) {
+
+    uint32_t err_code;
+    
+
+    // Initialize Logs, Power & Timer.
+    log_init();
     timers_init();
     power_management_init();
 
+    err_code = app_timer_create(&m_repeated_timer_id,
+                        APP_TIMER_MODE_REPEATED,
+                        repeated_timer_handler);
+
+    APP_ERROR_CHECK(err_code);
+    err_code = app_timer_start(m_repeated_timer_id, APP_TIMER_TICKS(1000), NULL);
+    APP_ERROR_CHECK(err_code);
+
+/*
     // Initialize modules
 #if defined(BOARD_ISP3080_UX_TG)
     batt_meas_module_init();
@@ -290,6 +317,10 @@ int main(void) {
         nrf_gpio_cfg_output(PIN_CURR_MODE);
     }
     m_range_start();
+*/
+
+
+
 
     // Enter main loop.
     for (;;) {
