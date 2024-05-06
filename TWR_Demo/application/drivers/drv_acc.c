@@ -218,7 +218,7 @@ uint32_t drv_acc_disable(void) {
 
 uint32_t drv_acc_get(float *p_acc) {
     uint32_t err_code = NRF_SUCCESS;
-    uint8_t raw_val[3];
+    int8_t raw_val[3];
 
     VERIFY_PARAM_NOT_NULL(p_acc);
 
