@@ -17,13 +17,11 @@
  *
  *****************************************************************************/
 
+ #include <stdint.h>
+#include <string.h>
 #include "app_error.h"
 #include "app_scheduler.h"
 #include "app_timer.h"
-#include "boards.h"
-#include "m_batt_meas.h"
-#include "m_ble_mgmt.h"
-#include "m_uwb_range.h"
 #include "nrf.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
@@ -32,8 +30,11 @@
 #include "nrf_log_default_backends.h"
 #include "nrf_pwr_mgmt.h"
 #include "nrf_sdm.h"
-#include <stdint.h>
-#include <string.h>
+#include "boards.h"
+#include "m_accelerometer.h"
+#include "m_batt_meas.h"
+#include "m_ble_mgmt.h"
+#include "m_uwb_range.h"
 
 #define DEAD_BEEF 0xDEADBEEF /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
@@ -264,6 +265,15 @@ void ble_mgmt_module_init(void) {
     APP_ERROR_CHECK(err_code);
 }
 
+/**@brief Function for initializing the accelerometer module
+ */
+void accelerometer_module_init(void) {
+    uint32_t err_code;
+
+    err_code = m_accelerometer_init();
+    APP_ERROR_CHECK(err_code);
+}
+
 /**@brief Function for application main entry.
  */
 int main(void) {
@@ -278,6 +288,9 @@ int main(void) {
     batt_meas_module_init();
 #endif
     uwb_range_module_init();
+#if (MODULE_ISP3080_UX_REV >= 2)
+    accelerometer_module_init();
+#endif
     ble_mgmt_module_init(); // To be called last
 
     // Start modules.
