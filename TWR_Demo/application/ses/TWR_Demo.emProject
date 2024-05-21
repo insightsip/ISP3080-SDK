@@ -146,20 +146,11 @@
     <configuration Name="Debug" debug_enable_RTT="Yes" />
     <folder Name="Drivers">
       <file file_name="../drivers/drv_uwb_range.c" />
-      <file file_name="../drivers/drv_lis2de12.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
-      <file file_name="../drivers/drv_acc.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
       <file file_name="../drivers/lis2de12/lis2de12_reg.c" />
     </folder>
     <folder Name="Ble_services">
       <file file_name="../ble_services/ble_range.c" />
       <file file_name="../ble_services/legacy_ble_range.c" />
-    </folder>
-    <folder Name="Utilities">
-      <file file_name="../utilities/twi_manager.c" />
     </folder>
     <configuration
       Name="Release"
@@ -339,20 +330,11 @@
       linker_section_placements_segments="FLASH RX 0x0 0x80000;RAM1 RWX 0x20000000 0x10000" />
     <folder Name="Drivers">
       <file file_name="../drivers/drv_uwb_range.c" />
-      <file file_name="../drivers/drv_lis2de12.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
-      <file file_name="../drivers/drv_acc.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
       <file file_name="../drivers/lis2de12/lis2de12_reg.c" />
     </folder>
     <folder Name="Ble_services">
       <file file_name="../ble_services/ble_range.c" />
       <file file_name="../ble_services/legacy_ble_range.c" />
-    </folder>
-    <folder Name="Utilities">
-      <file file_name="../utilities/twi_manager.c" />
     </folder>
     <configuration
       Name="Release"
@@ -522,22 +504,11 @@
     <configuration Name="Debug" debug_enable_RTT="Yes" />
     <folder Name="Drivers">
       <file file_name="../drivers/drv_uwb_range.c" />
-      <file file_name="../drivers/drv_lis2de12.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
-      <file file_name="../drivers/drv_acc.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
       <file file_name="../drivers/lis2de12/lis2de12_reg.c" />
     </folder>
     <folder Name="Ble_services">
       <file file_name="../ble_services/ble_range.c" />
       <file file_name="../ble_services/legacy_ble_range.c" />
-    </folder>
-    <folder Name="Utilities">
-      <file file_name="../utilities/twi_manager.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
     </folder>
     <configuration
       Name="Release"
@@ -700,20 +671,11 @@
       linker_section_placements_segments="FLASH RX 0x0 0x80000;RAM1 RWX 0x20000000 0x10000" />
     <folder Name="Drivers">
       <file file_name="../drivers/drv_uwb_range.c" />
-      <file file_name="../drivers/drv_lis2de12.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
-      <file file_name="../drivers/drv_acc.c">
-        <configuration Name="Debug" build_exclude_from_build="Yes" />
-      </file>
       <file file_name="../drivers/lis2de12/lis2de12_reg.c" />
     </folder>
     <folder Name="Ble_services">
       <file file_name="../ble_services/ble_range.c" />
       <file file_name="../ble_services/legacy_ble_range.c" />
-    </folder>
-    <folder Name="Utilities">
-      <file file_name="../utilities/twi_manager.c" />
     </folder>
     <configuration
       Name="Release"
