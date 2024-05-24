@@ -52,7 +52,8 @@ static const nrf_drv_twi_config_t twi_config = {
     .sda = PIN_LIS2DE12_SDA,
     .frequency = NRF_DRV_TWI_FREQ_400K,
     .interrupt_priority = APP_IRQ_PRIORITY_HIGH,
-    .clear_bus_init = false};
+    .clear_bus_init = false,
+    .hold_bus_uninit = false};
 static stmdev_ctx_t dev_ctx = {
     .write_reg = platform_write,
     .read_reg = platform_read,
@@ -70,8 +71,14 @@ uint32_t m_accelerometer_init(void) {
     uint8_t who_am_i;
 
     // Power up lis2de12
+    nrf_gpio_cfg(
+        PIN_LIS2DE12_EN,
+        NRF_GPIO_PIN_DIR_OUTPUT,
+        NRF_GPIO_PIN_INPUT_DISCONNECT,
+        NRF_GPIO_PIN_NOPULL,
+        NRF_GPIO_PIN_D0S1,
+        NRF_GPIO_PIN_NOSENSE);
     nrf_gpio_pin_set(PIN_LIS2DE12_EN);
-    nrf_gpio_cfg_output(PIN_LIS2DE12_EN);
     nrf_delay_ms(5);
 
     // Configure interrupts
@@ -99,8 +106,14 @@ uint32_t m_accelerometer_init(void) {
     // Check device ID
     lis2de12_device_id_get(&dev_ctx, &who_am_i);
 
+    // Disable SDO/SA0 pull up
+    lis2de12_pin_sdo_sa0_mode_set(&dev_ctx, LIS2DE12_PULL_UP_DISCONNECT);
+
     // Disable TWI
     nrf_drv_twi_disable(&m_twi);
+
+    // Uninitialize TWI
+    nrf_drv_twi_uninit(&m_twi);
 
     if (who_am_i != LIS2DE12_ID) {
         return NRF_ERROR_NOT_FOUND;
@@ -112,15 +125,15 @@ uint32_t m_accelerometer_init(void) {
 uint32_t m_accelerometer_start(void) {
     uint32_t err_code;
 
+    // Initialize TWI
+    err_code = nrf_drv_twi_init(&m_twi, &twi_config, NULL, NULL);
+    VERIFY_SUCCESS(err_code);
+
     // Enable TWI
     nrf_drv_twi_enable(&m_twi);
 
-    /* Enable Block Data Update. */
-    lis2de12_block_data_update_set(&dev_ctx, PROPERTY_DISABLE);
-    // Set Output Data Rate to 1Hz
-    lis2de12_data_rate_set(&dev_ctx, LIS2DE12_ODR_25Hz);
-    // Set full scale to 2g
-    lis2de12_full_scale_set(&dev_ctx, LIS2DE12_2g);
+    // Enable interrupt pin.
+    nrf_drv_gpiote_in_event_enable(PIN_LIS2DE12_INT1, true);
 
     return NRF_SUCCESS;
 }
@@ -128,11 +141,17 @@ uint32_t m_accelerometer_start(void) {
 uint32_t m_accelerometer_stop(void) {
     uint32_t err_code;
 
+    // Disable interrupt pin.
+    nrf_drv_gpiote_in_event_disable(PIN_LIS2DE12_INT1);
+
     // Set Output Data Rate to PD
     lis2de12_data_rate_set(&dev_ctx, LIS2DE12_POWER_DOWN);
 
     // disable TWI
     nrf_drv_twi_disable(&m_twi);
+
+    // Uninitialize TWI
+    nrf_drv_twi_uninit(&m_twi);
 
     return NRF_SUCCESS;
 }
@@ -156,17 +175,17 @@ uint32_t m_accelerometer_acc_get(float *acceleration_mg, uint8_t *data_available
         *data_available = 0;
     }
 #else // BYPASS
-    // Here we read OUT_X_H, OUT_Y_H and OUT_Z_H registers, there are only 1 Byte (contrary to values in the FIFO) 
+    // Here we read OUT_X_H, OUT_Y_H and OUT_Z_H registers, there are only 1 Byte (contrary to values in the FIFO)
     int8_t data_raw_acceleration[3];
-    platform_read(NULL, LIS2DE12_OUT_X_H, (int8_t*) &data_raw_acceleration[0], 1);
-    platform_read(NULL, LIS2DE12_OUT_Y_H, (int8_t*) &data_raw_acceleration[1], 1);
-    platform_read(NULL, LIS2DE12_OUT_Z_H, (int8_t*) &data_raw_acceleration[2], 1);
+    platform_read(NULL, LIS2DE12_OUT_X_H, (int8_t *)&data_raw_acceleration[0], 1);
+    platform_read(NULL, LIS2DE12_OUT_Y_H, (int8_t *)&data_raw_acceleration[1], 1);
+    platform_read(NULL, LIS2DE12_OUT_Z_H, (int8_t *)&data_raw_acceleration[2], 1);
 
     // Assuming sensor is set with a scale of +/-2g, we need to multiply raw value by:
     // 4/(2^8) = 4/256 = 0.015625
-    acceleration_mg[0] = data_raw_acceleration[0]*0.015625f;
-    acceleration_mg[1] = data_raw_acceleration[1]*0.015625f;
-    acceleration_mg[2] = data_raw_acceleration[2]*0.015625f;
+    acceleration_mg[0] = data_raw_acceleration[0] * 0.015625f;
+    acceleration_mg[1] = data_raw_acceleration[1] * 0.015625f;
+    acceleration_mg[2] = data_raw_acceleration[2] * 0.015625f;
 
     *data_available = 1;
 #endif
@@ -209,7 +228,7 @@ static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp, ui
     for (int i = 0; i < len; i++)
         buffer[i + 1] = bufp[i];
 
-    nrf_drv_twi_tx(&m_twi, LIS2DE12_I2C_ADD_L >> 1, buffer, len+1, false);
+    nrf_drv_twi_tx(&m_twi, LIS2DE12_I2C_ADD_L >> 1, buffer, len + 1, false);
 
     return 0;
 }
