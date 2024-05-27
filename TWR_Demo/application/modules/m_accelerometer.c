@@ -63,7 +63,8 @@ static stmdev_ctx_t dev_ctx = {
 /**@brief GPIOTE event handler, executed in interrupt-context.
  */
 static void gpiote_evt_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
-    //TODO
+     NRF_LOG_INFO("Interrupt detected on pin %d", pin);
+     //TODO
 }
 
 uint32_t m_accelerometer_init(void) {
@@ -88,11 +89,9 @@ uint32_t m_accelerometer_init(void) {
     }
 
     nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);
-    in_config.pull = NRF_GPIO_PIN_PULLDOWN;
     err_code = nrf_drv_gpiote_in_init(PIN_LIS2DE12_INT1, &in_config, gpiote_evt_handler);
     VERIFY_SUCCESS(err_code);
 
-    in_config.pull = NRF_GPIO_PIN_PULLDOWN;
     err_code = nrf_drv_gpiote_in_init(PIN_LIS2DE12_INT2, &in_config, gpiote_evt_handler);
     VERIFY_SUCCESS(err_code);
 
@@ -105,9 +104,23 @@ uint32_t m_accelerometer_init(void) {
 
     // Check device ID
     lis2de12_device_id_get(&dev_ctx, &who_am_i);
+    if (who_am_i == LIS2DE12_ID) {
+        // Disable SDO/SA0 pull up
+        lis2de12_pin_sdo_sa0_mode_set(&dev_ctx, LIS2DE12_PULL_UP_DISCONNECT);
 
-    // Disable SDO/SA0 pull up
-    lis2de12_pin_sdo_sa0_mode_set(&dev_ctx, LIS2DE12_PULL_UP_DISCONNECT);
+        // Enable Block Data Update
+        lis2de12_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
+
+        // Set Output Data Rate to Power down.
+        lis2de12_data_rate_set(&dev_ctx, LIS2DE12_POWER_DOWN);
+
+        // Set full scale to 2g
+        lis2de12_full_scale_set(&dev_ctx, LIS2DE12_2g);
+
+        err_code = NRF_SUCCESS;
+    } else {
+        err_code = NRF_ERROR_NOT_FOUND;
+    }
 
     // Disable TWI
     nrf_drv_twi_disable(&m_twi);
@@ -115,14 +128,10 @@ uint32_t m_accelerometer_init(void) {
     // Uninitialize TWI
     nrf_drv_twi_uninit(&m_twi);
 
-    if (who_am_i != LIS2DE12_ID) {
-        return NRF_ERROR_NOT_FOUND;
-    }
-
-    return NRF_SUCCESS;
+    return err_code;
 }
 
-uint32_t m_accelerometer_start(void) {
+uint32_t m_accelerometer_activity_detection_start(void) {
     uint32_t err_code;
 
     // Initialize TWI
@@ -132,8 +141,19 @@ uint32_t m_accelerometer_start(void) {
     // Enable TWI
     nrf_drv_twi_enable(&m_twi);
 
+    // Enable activity interrupt on INT2 pin.
+    lis2de12_ctrl_reg6_t pin_int2_cfg = { .i2_act = 1 };
+    lis2de12_pin_int2_config_set(&dev_ctx, &pin_int2_cfg);
+
+    // Set threshold & timeout for activity detection
+    lis2de12_act_threshold_set(&dev_ctx, 0x10);
+    lis2de12_act_timeout_set(&dev_ctx, 1);
+
+    // Set Output Data Rate 10hZ.
+    lis2de12_data_rate_set(&dev_ctx, LIS2DE12_ODR_10Hz);
+
     // Enable interrupt pin.
-    nrf_drv_gpiote_in_event_enable(PIN_LIS2DE12_INT1, true);
+    nrf_drv_gpiote_in_event_enable(PIN_LIS2DE12_INT2, true);
 
     return NRF_SUCCESS;
 }
@@ -141,8 +161,9 @@ uint32_t m_accelerometer_start(void) {
 uint32_t m_accelerometer_stop(void) {
     uint32_t err_code;
 
-    // Disable interrupt pin.
+    // Disable interrupt pins.
     nrf_drv_gpiote_in_event_disable(PIN_LIS2DE12_INT1);
+    nrf_drv_gpiote_in_event_disable(PIN_LIS2DE12_INT2);
 
     // Set Output Data Rate to PD
     lis2de12_data_rate_set(&dev_ctx, LIS2DE12_POWER_DOWN);

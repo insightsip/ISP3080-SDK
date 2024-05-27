@@ -33,11 +33,11 @@
  */
 uint32_t m_accelerometer_init(void);
 
-/**@brief Start accelerometer measurements
+/**@brief Start accelerometer activity detection
  *
  * @retval NRF_SUCCESS If successful.
  */
-uint32_t m_accelerometer_start(void);
+uint32_t m_accelerometer_activity_detection_start(void);
 
 /**@brief Stop accelerometer measurements
  *
@@ -45,7 +45,22 @@ uint32_t m_accelerometer_start(void);
  */
 uint32_t m_accelerometer_stop(void);
 
+/**@brief Get accelerometer sample
+ *
+ * @param[out] acceleration_mg  accelerometer result in mg
+ * @param[out] data_available   indicate if new data is avalaible (only for FIFO mode)
+ *
+ * @retval NRF_SUCCESS If successful.
+ */
 uint32_t m_accelerometer_acc_get(float *acceleration_mg, uint8_t *data_available);
+
+/**@brief Get temperature sample
+ *
+ * @param[out] acceleration_mg  temperature result in °C
+ * @param[out] data_available   indicate if new data is avalaible (only for FIFO mode)
+ *
+ * @retval NRF_SUCCESS If successful.
+ */
 uint32_t m_accelerometer_temp_get(float *temperature_degC , uint8_t *data_available);
 
 #endif
