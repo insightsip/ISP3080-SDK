@@ -467,8 +467,10 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     port_set_dwic_isr(dwt_isr);
 
     // Configure uwb signal
-    dwt_configure(&uwb_config);
-
+    if (dwt_configure(&uwb_config)) {
+        NRF_LOG_ERROR("dwt_configure failed");
+        return NRF_ERROR_INTERNAL;
+    }
     // Configure uwb tx power
     dwt_configuretxrf(&tx_config);
     NRF_LOG_INFO("UWB Tx power: %x", tx_config.power);
