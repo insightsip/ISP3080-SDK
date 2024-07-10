@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.0] 2024-07-10
+
+### Changed
+
+- Replace accelerometer implementation with a one based of the lis2de12 repository from ST
+- Implement activity detection
+
+### Fixed
+
+- Fix an issue where the accelerometer was drawing too much current
+
 ## [1.0.2] 2024-04-22
 
 ### Fixed

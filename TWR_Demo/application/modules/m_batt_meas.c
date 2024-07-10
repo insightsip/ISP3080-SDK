@@ -143,7 +143,7 @@ static uint32_t saadc_init(void) {
     VERIFY_SUCCESS(err_code);
 
     nrf_saadc_channel_config_t channel_config = NRFX_SAADC_DEFAULT_CHANNEL_CONFIG_SE(digital_to_analog_pin(m_batt_meas_param.pin_batt));
-    channel_config.acq_time = NRF_SAADC_ACQTIME_15US;
+    channel_config.acq_time = NRF_SAADC_ACQTIME_3US;
     err_code = nrfx_saadc_channel_init(0, &channel_config);
     VERIFY_SUCCESS(err_code);
 

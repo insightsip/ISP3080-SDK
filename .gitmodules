@@ -1,0 +1,3 @@
+[submodule "TWR_Demo/application/drivers/lis2de12"]
+	path = TWR_Demo/application/drivers/lis2de12
+	url = https://github.com/STMicroelectronics/lis2de12-pid
