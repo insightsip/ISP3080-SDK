@@ -17,3 +17,15 @@ SES provide a free license for nRF52833 development. Therefore it can be used fr
 Licenses can be requested at https://license.segger.com/Nordic.cgi
 
 For more information regarding Segger Embedded Studio, please visit https://www.segger.com/products/development-tools/embedded-studio/
+
+## Getting started
+
+- Install SES version 5.42a.
+- Download the SDK package using the command:
+
+        git clone --recursive https://github.com/insightsip/ISP3080-SDK.git
+
+- With SES open the file:
+  - *dw3000_api.emProject* located in  ISP3080-SDK\DW3XXX_API_rev9p3\API\Build_Platforms\nRF52833-DK to access the list of basic UWB examples.
+  - *TWR_Demo.emProject* located in ISP3080-UWB\Software\ISP3080-SDK\TWR_Demo\application\ses to access insight SiP demo code.
+- Build and run the project.
