@@ -81,8 +81,14 @@ static dwt_config_t uwb_config = {
     DWT_PDOA_M0       /* PDOA mode 3 */
 };
 
-static dwt_txconfig_t tx_config = {
+static dwt_txconfig_t tx_config_ch5 = {
     0x34,       /* PG delay. */
+    0xa2a2a2a2, /* TX power. */
+    0x0         /*PG count*/
+};
+
+static dwt_txconfig_t tx_config_ch9 = {
+    0x27,       /* PG delay. */
     0xa2a2a2a2, /* TX power. */
     0x0         /*PG count*/
 };
@@ -407,9 +413,20 @@ static void cb_spi_ready(const dwt_cb_data_t *cb_data) {
 uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     uint32_t err_code;
     uint32_t devid;
+    uint8_t channel;
 
     VERIFY_PARAM_NOT_NULL(p_params);
     VERIFY_PARAM_NOT_NULL(p_params->evt_handler);
+
+    if (p_params->role >= NUM_ROLES) {
+        NRF_LOG_ERROR("Unsuported UWB role");
+        return NRF_ERROR_INTERNAL;
+    }
+
+    if (p_params->channel != 5 && p_params->channel != 9) {
+        NRF_LOG_ERROR("Unsuported UWB channel");
+        return NRF_ERROR_INTERNAL;
+    }
 
     m_uwb_drv_range.evt_handler = p_params->evt_handler;
     m_uwb_drv_range.sw_cfg.role = p_params->role;
@@ -419,6 +436,7 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     m_uwb_drv_range.sw_cfg.busy = false;
     memcpy(&m_uwb_drv_range.sw_cfg.src_address, p_params->own_address, 8);
     memcpy(&m_uwb_drv_range.sw_cfg.dest_address, p_params->reply_address, 8);
+    channel = p_params->channel;
 
     // Configure Wake up pin
     if (DW3000_WAKEUP_Pin != DRV_UWB_RANGE_PIN_NOT_USED) {
@@ -467,13 +485,27 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     port_set_dwic_isr(dwt_isr);
 
     // Configure uwb signal
+    uwb_config.chan = channel;
     if (dwt_configure(&uwb_config)) {
         NRF_LOG_ERROR("dwt_configure failed");
         return NRF_ERROR_INTERNAL;
     }
-    // Configure uwb tx power
-    dwt_configuretxrf(&tx_config);
-    NRF_LOG_INFO("UWB Tx power: %x", tx_config.power);
+
+    // Configure uwb tx power & pulse shape
+    if (channel == 5) {
+        dwt_configuretxrf(&tx_config_ch5);
+        dwt_set_alternative_pulse_shape(0);
+        NRF_LOG_INFO("UWB Tx power: %x", tx_config_ch5.power);
+    }
+    else if (channel == 9) {
+        dwt_configuretxrf(&tx_config_ch9);
+        dwt_set_alternative_pulse_shape(1);
+        NRF_LOG_INFO("UWB Tx power: %x", tx_config_ch9.power);
+    }
+    else {
+        NRF_LOG_ERROR("dwt_configuretxrf failed");
+        return NRF_ERROR_INTERNAL;
+    }
 
     // Configure antenna delays
     dwt_setrxantennadelay(RX_ANT_DLY & 0xFFFF);
@@ -494,7 +526,7 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
         NRF_LOG_INFO("UWB TX/RX LEDs enabled");
     }
 
-    // Configure Sleep mode
+    // Configure sleep mode
     if (m_uwb_drv_range.sw_cfg.sleep_enabled) {
         dwt_configuresleep(DWT_CONFIG | DWT_PGFCAL, DWT_SLP_EN | DWT_WAKE_WUP | DWT_PRES_SLEEP | DWT_SLEEP);
         uwb_sleep();

@@ -132,6 +132,7 @@ typedef struct
 {
     drv_uwb_range_evt_handler_t evt_handler; /**< Event handler - called after a pin interrupt has been detected. */
     drv_uwb_range_role_t role;
+    uint8_t channel;
     uint8_t const *own_address;
     uint8_t const *reply_address;
     bool enable_sleep;
