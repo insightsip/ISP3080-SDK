@@ -49,17 +49,12 @@ static drv_uwb_range_evt_handler_t evt_handler; /**< Event handler called by gpi
 static drv_uwb_range_sw_cfg_t sw_cfg;           /**< SW configuration. */
 static double m_last_range = -1.0;
 static volatile uint8_t is_uwb_sleeping = 0;
-static uint32_t poll_tx_timestamp_u32;
-static uint32_t poll_rx_timestamp_u32;
-static uint32_t resp_tx_timestamp_u32;
-static uint32_t resp_rx_timestamp_u32;
+static uint32_t poll_tx_timestamp_u32, poll_rx_timestamp_u32, resp_tx_timestamp_u32, resp_rx_timestamp_u32;
 static uint64_t poll_rx_timestamp_u64;
 static uint64_t resp_tx_timestamp_u64;
 static uint32_t frame_sn;                   /**< Frame counter */
-static uint16_t tx_ant_dly_ch5 = TX_ANT_DLY;
-static uint16_t rx_ant_dly_ch5 = RX_ANT_DLY;
-static uint16_t tx_ant_dly_ch9 = TX_ANT_DLY;
-static uint16_t rx_ant_dly_ch9 = RX_ANT_DLY;
+static uint16_t tx_ant_dly = TX_ANT_DLY;
+static uint16_t rx_ant_dly = RX_ANT_DLY;
 
 static dwt_config_t uwb_config = {
     5,                /* Channel number. */
@@ -77,14 +72,8 @@ static dwt_config_t uwb_config = {
     DWT_PDOA_M0       /* PDOA mode 3 */
 };
 
-static dwt_txconfig_t tx_config_ch5 = {
+static dwt_txconfig_t tx_config = {
     0x34,       /* PG delay. */
-    0xa2a2a2a2, /* TX power. */
-    0x0         /*PG count*/
-};
-
-static dwt_txconfig_t tx_config_ch9 = {
-    0x27,       /* PG delay. */
     0xa2a2a2a2, /* TX power. */
     0x0         /*PG count*/
 };
@@ -176,11 +165,11 @@ static void cb_tx_done(const dwt_cb_data_t *txd) {
     NRF_LOG_DEBUG("cb_tx_done event received");
 
     switch (sw_cfg.role) {
-    case TWR_RESPONDER: // TWR_RESPONDER
+    case TWR_RESPONDER:
         m_last_range = -1;
         break;
 
-    case TWR_INITIATOR: //Initiator
+    case TWR_INITIATOR:
         break;
 
     default:
@@ -216,7 +205,7 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
 
     // Action depending on the role.....
     switch (sw_cfg.role) {
-    case TWR_INITIATOR: // TWR_INITIATOR
+    case TWR_INITIATOR:
     {
         if (rxmsg_ll.messageData[0] == SIMPLE_MSG_ANCH_RESP) // SIMPLE_MSG_ANCH_RESP received
         {
@@ -262,7 +251,7 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
         }
     } break;
 
-    case TWR_RESPONDER: // TWR_RESPONDER
+    case TWR_RESPONDER:
     {
         if (rxmsg_ll.messageData[0] == SIMPLE_MSG_TAG_POLL) // SIMPLE_MSG_TAG_POLL received
         {
@@ -277,7 +266,7 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
             dwt_setdelayedtrxtime(resp_tx_time);
 
             /* Response TX timestamp is the transmission time we programmed plus the antenna delay. */
-            resp_tx_timestamp_u64 = (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
+            resp_tx_timestamp_u64 = (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + tx_ant_dly;
 
             // Prepare and send ANCHOR RESP msg to TWR_INITIATOR
             resp_msg.seqNum = frame_sn++;
@@ -326,7 +315,7 @@ static void cb_rx_to(const dwt_cb_data_t *rxd) {
     NRF_LOG_DEBUG("cb_rx_to event received");
 
     switch (sw_cfg.role) {
-    case TWR_INITIATOR: // TWR_INITIATOR
+    case TWR_INITIATOR:
         // go to sleep mode
         if (sw_cfg.sleep_enabled) {
             uwb_sleep();
@@ -340,7 +329,7 @@ static void cb_rx_to(const dwt_cb_data_t *rxd) {
         }
         break;
 
-    case TWR_RESPONDER: // TWR_RESPONDER
+    case TWR_RESPONDER:
         //immediate rx enable
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
         break;
@@ -356,7 +345,7 @@ static void cb_rx_err(const dwt_cb_data_t *rxd) {
      NRF_LOG_DEBUG("cb_rx_err event received");
 
     switch (sw_cfg.role) {
-    case TWR_INITIATOR: // TWR_INITIATOR
+    case TWR_INITIATOR:
         // go to sleep mode
         if (sw_cfg.sleep_enabled) {
             uwb_sleep();
@@ -371,7 +360,7 @@ static void cb_rx_err(const dwt_cb_data_t *rxd) {
 
         break;
 
-    case TWR_RESPONDER: // TWR_RESPONDER
+    case TWR_RESPONDER:
         //immediate rx enable
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
         break;
@@ -478,34 +467,27 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
         return NRF_ERROR_INTERNAL;
     }
 
-    // Read OTP memory and fetch calibration values
+    // Read OTP memory
     dwt_otpread(OTP_EUID_ADDR_L, otp_memory, OTP_MEMORY_MAX_ADDR);
-
-    if (otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
-        tx_ant_dly_ch5 = otp_memory[OTP_CH5_ANT_DLY_ADDR] & 0xFFFF;
-        rx_ant_dly_ch5 = (otp_memory[OTP_CH5_ANT_DLY_ADDR] >> 16) & 0xFFFF;
-    }
-    if (otp_memory[OTP_CH9_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
-        tx_ant_dly_ch9 = otp_memory[OTP_CH9_ANT_DLY_ADDR] & 0xFFFF;
-        rx_ant_dly_ch9 = (otp_memory[OTP_CH9_ANT_DLY_ADDR] >> 16) & 0xFFFF;
-    }
-    if (otp_memory[OTP_CH5_PWR_ADDR] != EMPTY_OTP_VAL) {
-        tx_config_ch5.power = otp_memory[OTP_CH5_PWR_ADDR];
-    }
-    if (otp_memory[OTP_CH9_PWR_ADDR] != EMPTY_OTP_VAL) {
-        tx_config_ch9.power = otp_memory[OTP_CH9_PWR_ADDR];
-    }
 
     // Configure uwb tx power & pulse shape
     if (channel == 5) {
-        dwt_configuretxrf(&tx_config_ch5);
+        if (otp_memory[OTP_CH5_PWR_ADDR] != EMPTY_OTP_VAL) {
+            tx_config.power = otp_memory[OTP_CH5_PWR_ADDR];
+        }
+        tx_config.PGdly = 0x34;
+        dwt_configuretxrf(&tx_config);
         dwt_set_alternative_pulse_shape(0);
-        NRF_LOG_DEBUG("UWB Tx power: %x", tx_config_ch5.power);
+        NRF_LOG_DEBUG("UWB Tx power: %x", tx_config.power);
     }
     else if (channel == 9) {
-        dwt_configuretxrf(&tx_config_ch9);
+        if (otp_memory[OTP_CH9_PWR_ADDR] != EMPTY_OTP_VAL) {
+            tx_config.power = otp_memory[OTP_CH9_PWR_ADDR];
+        }
+        tx_config.PGdly = 0x27;
+        dwt_configuretxrf(&tx_config);
         dwt_set_alternative_pulse_shape(1);
-        NRF_LOG_DEBUG("UWB Tx power: %x", tx_config_ch9.power);
+        NRF_LOG_DEBUG("UWB Tx power: %x", tx_config.power);
     }
     else {
         NRF_LOG_ERROR("dwt_configuretxrf failed");
@@ -514,14 +496,22 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
 
     // Configure antenna delays
     if (channel == 5) {
-        dwt_setrxantennadelay(rx_ant_dly_ch5);
-        dwt_settxantennadelay(tx_ant_dly_ch5);
-        NRF_LOG_DEBUG("UWB Rx Ant delay: 0x%08x, Tx Ant delay 0x%08x", rx_ant_dly_ch5, tx_ant_dly_ch5);
+        if (otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
+            rx_ant_dly = (otp_memory[OTP_CH5_ANT_DLY_ADDR] >> 16) & 0xFFFF;
+            tx_ant_dly = otp_memory[OTP_CH5_ANT_DLY_ADDR] & 0xFFFF;
+        }
+        dwt_setrxantennadelay(rx_ant_dly);
+        dwt_settxantennadelay(tx_ant_dly);
+        NRF_LOG_DEBUG("UWB Rx Ant delay: 0x%08x, Tx Ant delay 0x%08x", rx_ant_dly, tx_ant_dly);
     }
     else if (channel == 9) {
-        dwt_setrxantennadelay(rx_ant_dly_ch9);
-        dwt_settxantennadelay(tx_ant_dly_ch9);
-        NRF_LOG_DEBUG("UWB Rx Ant delay: 0x%08x, Tx Ant delay 0x%08x", rx_ant_dly_ch9, tx_ant_dly_ch9);
+        if (otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
+            rx_ant_dly = (otp_memory[OTP_CH9_ANT_DLY_ADDR] >> 16) & 0xFFFF;
+            tx_ant_dly = otp_memory[OTP_CH9_ANT_DLY_ADDR] & 0xFFFF;
+        }
+        dwt_setrxantennadelay(rx_ant_dly);
+        dwt_settxantennadelay(tx_ant_dly);
+        NRF_LOG_DEBUG("UWB Rx Ant delay: 0x%08x, Tx Ant delay 0x%08x", rx_ant_dly, tx_ant_dly);
     }
     else {
         NRF_LOG_ERROR("dwt_setrxantennadelay/dwt_settxantennadelay failed");
@@ -597,7 +587,6 @@ uint32_t drv_uwb_range_request(void) {
         uwb_wake_up();
 
     // Write the frame data
-    //dwt_writesysstatuslo(SYS_STATUS_TXFRS_BIT_MASK) ;
     dwt_writetxdata(length, (uint8_t *)&init_msg, 0); /* Zero offset in TX buffer. */
     dwt_writetxfctrl(length, 0, 1);                   /* Zero offset in TX buffer, ranging. */
 
