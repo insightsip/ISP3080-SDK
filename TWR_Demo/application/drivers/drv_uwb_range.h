@@ -86,6 +86,32 @@
 #define RX_ANT_DLY 18394
 #endif
 
+// OTP memory address list
+#define OTP_EUID_ADDR_L 0x00            /**< First 4 Bytes of 64 bit EUID OTP address */
+#define OTP_EUID_ADDR_H 0x01            /**< Last 4 Bytes of 64 bit EUID OTP address */
+#define OTP_ALT_EUID_ADDR_L 0x02        /**< First 4 Bytes of alternative 64 bit EUID OTP address */
+#define OTP_ALT_EUID_ADDR_H 0x03        /**< Last 4 Bytes of alternative 64 bit EUID OTP address */
+//Reserved
+#define OTP_CH5_ANT_DLY_ADDR 0x10       /**< Channel 5 antenna delay OTP address */
+#define OTP_CH9_ANT_DLY_ADDR 0x11       /**< Channel 9 antenna delay OTP address */
+#define OTP_CUST12_ADDR 0x12            /**< Customer OTP address */
+#define OTP_CUST13_ADDR 0x13            /**< Customer OTP address */
+#define OTP_CH5_PWR_ADDR 0x14           /**< Channel 5 TX Power OTP address */
+#define OTP_CH9_PWR_ADDR 0x15           /**< Channel 9 TX Powe OTP address */
+#define OTP_CUST16_ADDR 0x16            /**< Customer OTP address */
+#define OTP_CUST17_ADDR 0x17            /**< Customer OTP address */
+#define OTP_CUST18_ADDR 0x18            /**< Customer OTP address */
+#define OTP_CUST19_ADDR 0x19            /**< Customer OTP address */
+#define OTP_CUST1A_ADDR 0x1A            /**< Customer OTP address */
+#define OTP_CUST1B_ADDR 0x1B            /**< Customer OTP address */
+#define OTP_CUST1C_ADDR 0x1C            /**< Customer OTP address */
+#define OTP_CUST1D_ADDR 0x1D            /**< Customer OTP address */
+#define OTP_XTAL_ADDR 0x1E              /**< XTAL trim OTP address */
+#define OTP_REV_ADDR 0x1E               /**< Revision OTP address */
+#define OTP_MEMORY_MAX_ADDR 0x1F
+#define EMPTY_OTP_VAL 0
+
+
 // simple 802.15.4 frame structure - using long addresses
 typedef struct
 {
