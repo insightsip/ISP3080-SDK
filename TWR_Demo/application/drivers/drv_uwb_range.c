@@ -448,7 +448,7 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     gpio_init();
 
     // Initialise the SPI
-    nrf52840_dk_spi_init();
+    nrf52833_dk_spi_init();
 
     // Configuring interrupt
     dw_irq_init();

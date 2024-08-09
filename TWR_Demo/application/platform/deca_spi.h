@@ -74,10 +74,10 @@ typedef struct
   spi_handle_t    *pSpi;
 }dw_t;
 
-/* @fn    nrf52840_dk_spi_init
- * Initialise nRF52840-DK SPI
+/* @fn    nrf52833_dk_spi_init
+ * Initialise nRF52833-DK SPI
  * */
-void nrf52840_dk_spi_init(void);
+void nrf52833_dk_spi_init(void);
 
 /* @fn      port_set_dw_ic_spi_slowrate
  * @brief   set 2MHz
