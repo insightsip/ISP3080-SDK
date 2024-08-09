@@ -41,15 +41,8 @@ typedef struct
     bool sleep_enabled;        /**< is sleep mode enabled */
     bool filter_enabled;       /**< is frame filter enabled */
     bool tx_rx_leds_enabled;   /**< are RX/TX LEDs enabled */
-    uint32_t frame_sn;         /**< Frame counter */
     uint8_t src_address[8];    /**< Address of the device */
     uint8_t dest_address[8];   /**< Address of the device to range with */
-    uint32_t poll_tx_timestamp_u32;
-    uint32_t poll_rx_timestamp_u32;
-    uint32_t resp_tx_timestamp_u32;
-    uint32_t resp_rx_timestamp_u32;
-    uint64_t poll_rx_timestamp_u64;
-    uint64_t resp_tx_timestamp_u64;
 } drv_uwb_range_sw_cfg_t;
 
 /**@brief uwb configuration struct.
@@ -64,6 +57,13 @@ srd_msg_dlsl init_msg, resp_msg;            /**< message buffers. */
 static drv_uwb_range_t m_uwb_drv_range;     /**< Stored configuration. */
 static double m_last_range = -1.0;
 static volatile uint8_t is_uwb_sleeping = 0;
+static uint32_t poll_tx_timestamp_u32;
+static uint32_t poll_rx_timestamp_u32;
+static uint32_t resp_tx_timestamp_u32;
+static uint32_t resp_rx_timestamp_u32;
+static uint64_t poll_rx_timestamp_u64;
+static uint64_t resp_tx_timestamp_u64;
+static uint32_t frame_sn;                   /**< Frame counter */
 
 static dwt_config_t uwb_config = {
     5,                /* Channel number. */
@@ -229,8 +229,8 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
             double tof;
 
             // Retrieve poll transmission and response reception timestamps.
-            m_uwb_drv_range.sw_cfg.poll_rx_timestamp_u32 = dwt_readrxtimestamplo32();
-            m_uwb_drv_range.sw_cfg.poll_tx_timestamp_u32 = dwt_readtxtimestamplo32();
+            poll_rx_timestamp_u32 = dwt_readrxtimestamplo32();
+            poll_tx_timestamp_u32 = dwt_readtxtimestamplo32();
 
             /* Read carrier integrator value and calculate clock offset ratio */
             clock_offset_ratio = ((float)dwt_readclockoffset()) / (uint32_t)(1 << 26);
@@ -241,12 +241,12 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
             }
 
             // Get timestamps embedded in response message
-            resp_msg_get_ts(&rxmsg_ll.messageData[POLL_RX_TS], &m_uwb_drv_range.sw_cfg.resp_rx_timestamp_u32);
-            resp_msg_get_ts(&rxmsg_ll.messageData[RESP_TX_TS], &m_uwb_drv_range.sw_cfg.resp_tx_timestamp_u32);
+            resp_msg_get_ts(&rxmsg_ll.messageData[POLL_RX_TS], &resp_rx_timestamp_u32);
+            resp_msg_get_ts(&rxmsg_ll.messageData[RESP_TX_TS], &resp_tx_timestamp_u32);
 
             /* Compute time of flight and distance, using clock offset ratio to correct for differing local and remote clock rates */
-            rtd_init = m_uwb_drv_range.sw_cfg.poll_rx_timestamp_u32 - m_uwb_drv_range.sw_cfg.poll_tx_timestamp_u32;
-            rtd_resp = m_uwb_drv_range.sw_cfg.resp_tx_timestamp_u32 - m_uwb_drv_range.sw_cfg.resp_rx_timestamp_u32;
+            rtd_init = poll_rx_timestamp_u32 - poll_tx_timestamp_u32;
+            rtd_resp = resp_tx_timestamp_u32 - resp_rx_timestamp_u32;
             tof = (((rtd_init - rtd_resp * (1.0f - clock_offset_ratio)) / 2.0F) * DWT_TIME_UNITS);
             m_last_range = tof * SPEED_OF_LIGHT;
 
@@ -274,19 +274,19 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
             int ret;
 
             /* Retrieve poll reception timestamp. */
-            m_uwb_drv_range.sw_cfg.poll_rx_timestamp_u64 = get_rx_timestamp_u64();
+            poll_rx_timestamp_u64 = get_rx_timestamp_u64();
 
             /* Compute response message transmission time. */
-            resp_tx_time = (m_uwb_drv_range.sw_cfg.poll_rx_timestamp_u64 + (POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
+            resp_tx_time = (poll_rx_timestamp_u64 + (POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
             dwt_setdelayedtrxtime(resp_tx_time);
 
             /* Response TX timestamp is the transmission time we programmed plus the antenna delay. */
-            m_uwb_drv_range.sw_cfg.resp_tx_timestamp_u64 = (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
+            resp_tx_timestamp_u64 = (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
 
             // Prepare and send ANCHOR RESP msg to TWR_INITIATOR
-            resp_msg.seqNum = m_uwb_drv_range.sw_cfg.frame_sn++;
-            resp_msg_set_ts(&resp_msg.messageData[POLL_RX_TS], m_uwb_drv_range.sw_cfg.poll_rx_timestamp_u64); // Poll message reception timestamp
-            resp_msg_set_ts(&resp_msg.messageData[RESP_TX_TS], m_uwb_drv_range.sw_cfg.resp_tx_timestamp_u64); // Response message transmission timestamp
+            resp_msg.seqNum = frame_sn++;
+            resp_msg_set_ts(&resp_msg.messageData[POLL_RX_TS], poll_rx_timestamp_u64); // Poll message reception timestamp
+            resp_msg_set_ts(&resp_msg.messageData[RESP_TX_TS], resp_tx_timestamp_u64); // Response message transmission timestamp
 
             uint16_t length = SIMPLE_MSG_ANCH_RESP_LEN + FRAME_CRTL_AND_ADDRESS_L + FRAME_CRC;
 
@@ -562,7 +562,7 @@ uint32_t drv_uwb_range_request(void) {
     }
 
     // Increment frame counter
-    init_msg.seqNum = m_uwb_drv_range.sw_cfg.frame_sn++;
+    init_msg.seqNum = frame_sn++;
 
     // Add last range result
     if (m_last_range != -1) {
