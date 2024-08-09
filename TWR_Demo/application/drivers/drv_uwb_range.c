@@ -392,12 +392,7 @@ static void cb_spi_ready(const dwt_cb_data_t *cb_data) {
     /* Restore the required configurations on wake */
     dwt_restoreconfig();
 
-    // dwt_settxantennadelay(TX_ANT_DLY);
-    // dwt_setrxantennadelay(RX_ANT_DLY);
-
     //set EUI as it will not be preserved unless the EUI is programmed and loaded from NVM
-    // dwt_entersleepaftertx(1);
-    // dwt_setinterrupt(DWT_INT_TXFRS_BIT_MASK, NULL, 1); //re-enable the TX/RX interrupts
      dwt_seteui(sw_cfg.src_address);
 
     is_uwb_sleeping = 0; // device is awake
