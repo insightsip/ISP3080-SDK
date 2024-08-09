@@ -31,7 +31,7 @@
 NRF_LOG_MODULE_REGISTER();
 
 extern const struct dwt_probe_s dw3000_probe_interf;
-srd_msg_dlsl init_msg, resp_msg;
+
 
 /**@brief Initialization struct for uwb sw driver.
  */
@@ -41,7 +41,6 @@ typedef struct
     bool sleep_enabled;        /**< is sleep mode enabled */
     bool filter_enabled;       /**< is frame filter enabled */
     bool tx_rx_leds_enabled;   /**< are RX/TX LEDs enabled */
-    bool busy;                 /**< is driver busy ie not allowing configuration */
     uint32_t frame_sn;         /**< Frame counter */
     uint8_t src_address[8];    /**< Address of the device */
     uint8_t dest_address[8];   /**< Address of the device to range with */
@@ -61,7 +60,8 @@ typedef struct
     drv_uwb_range_evt_handler_t evt_handler; /**< Event handler called by gpiote_evt_sceduled. */
 } drv_uwb_range_t;
 
-static drv_uwb_range_t m_uwb_drv_range; /**< Stored configuration. */
+srd_msg_dlsl init_msg, resp_msg;            /**< message buffers. */
+static drv_uwb_range_t m_uwb_drv_range;     /**< Stored configuration. */
 static double m_last_range = -1.0;
 static volatile uint8_t is_uwb_sleeping = 0;
 
@@ -250,8 +250,6 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
             tof = (((rtd_init - rtd_resp * (1.0f - clock_offset_ratio)) / 2.0F) * DWT_TIME_UNITS);
             m_last_range = tof * SPEED_OF_LIGHT;
 
-            m_uwb_drv_range.sw_cfg.busy = false;
-
             // Generate data event
             if (m_uwb_drv_range.evt_handler != NULL) {
                 drv_uwb_range_evt_t evt;
@@ -337,7 +335,6 @@ static void cb_rx_to(const dwt_cb_data_t *rxd) {
         if (m_uwb_drv_range.sw_cfg.sleep_enabled) {
             uwb_sleep();
         }
-        m_uwb_drv_range.sw_cfg.busy = false;
 
         // generate timeout event
         if (m_uwb_drv_range.evt_handler != NULL) {
@@ -365,9 +362,9 @@ static void cb_rx_err(const dwt_cb_data_t *rxd) {
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_INITIATOR: // TWR_INITIATOR
         // go to sleep mode
-        if (m_uwb_drv_range.sw_cfg.sleep_enabled)
+        if (m_uwb_drv_range.sw_cfg.sleep_enabled) {
             uwb_sleep();
-        m_uwb_drv_range.sw_cfg.busy = false;
+        }
 
         // generate event
         if (m_uwb_drv_range.evt_handler != NULL) {
@@ -433,7 +430,6 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     m_uwb_drv_range.sw_cfg.sleep_enabled = p_params->enable_sleep;
     m_uwb_drv_range.sw_cfg.filter_enabled = p_params->enable_filter;
     m_uwb_drv_range.sw_cfg.tx_rx_leds_enabled = p_params->enable_tx_rx_leds;
-    m_uwb_drv_range.sw_cfg.busy = false;
     memcpy(&m_uwb_drv_range.sw_cfg.src_address, p_params->own_address, 8);
     memcpy(&m_uwb_drv_range.sw_cfg.dest_address, p_params->reply_address, 8);
     channel = p_params->channel;
@@ -564,7 +560,6 @@ uint32_t drv_uwb_range_request(void) {
     if (m_uwb_drv_range.sw_cfg.role != TWR_INITIATOR) {
         return NRF_ERROR_INVALID_STATE;
     }
-    m_uwb_drv_range.sw_cfg.busy = true;
 
     // Increment frame counter
     init_msg.seqNum = m_uwb_drv_range.sw_cfg.frame_sn++;
@@ -600,11 +595,10 @@ uint32_t drv_uwb_range_request(void) {
 uint32_t drv_uwb_range_scan_start(void) {
     switch (m_uwb_drv_range.sw_cfg.role) {
     case TWR_RESPONDER: {
-        m_uwb_drv_range.sw_cfg.busy = true;
-
         // wake up
-        if (m_uwb_drv_range.sw_cfg.sleep_enabled)
+        if (m_uwb_drv_range.sw_cfg.sleep_enabled) {
             uwb_wake_up();
+        }
 
         //immediate rx enable
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
@@ -626,10 +620,9 @@ uint32_t drv_uwb_range_scan_stop(void) {
         dwt_softreset(1);
 
         // go to sleep
-        if (m_uwb_drv_range.sw_cfg.sleep_enabled)
+        if (m_uwb_drv_range.sw_cfg.sleep_enabled) {
             uwb_sleep();
-
-        m_uwb_drv_range.sw_cfg.busy = false;
+        }
     } break;
 
     case TWR_INITIATOR:
