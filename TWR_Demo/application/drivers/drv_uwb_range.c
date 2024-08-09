@@ -53,7 +53,7 @@ typedef struct
     drv_uwb_range_evt_handler_t evt_handler; /**< Event handler called by gpiote_evt_sceduled. */
 } drv_uwb_range_t;
 
-srd_msg_dlsl init_msg, resp_msg;            /**< message buffers. */
+srd_msg_dlsl init_msg, resp_msg;            /**< Message buffers. */
 static drv_uwb_range_t m_uwb_drv_range;     /**< Stored configuration. */
 static double m_last_range = -1.0;
 static volatile uint8_t is_uwb_sleeping = 0;
@@ -64,6 +64,10 @@ static uint32_t resp_rx_timestamp_u32;
 static uint64_t poll_rx_timestamp_u64;
 static uint64_t resp_tx_timestamp_u64;
 static uint32_t frame_sn;                   /**< Frame counter */
+static uint16_t tx_ant_dly_ch5 = TX_ANT_DLY;
+static uint16_t rx_ant_dly_ch5 = RX_ANT_DLY;
+static uint16_t tx_ant_dly_ch9 = TX_ANT_DLY;
+static uint16_t rx_ant_dly_ch9 = RX_ANT_DLY;
 
 static dwt_config_t uwb_config = {
     5,                /* Channel number. */
@@ -409,8 +413,8 @@ static void cb_spi_ready(const dwt_cb_data_t *cb_data) {
 
 uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     uint32_t err_code;
-    uint32_t devid;
     uint8_t channel;
+    uint32_t otp_memory[OTP_MEMORY_MAX_ADDR];
 
     VERIFY_PARAM_NOT_NULL(p_params);
     VERIFY_PARAM_NOT_NULL(p_params->evt_handler);
@@ -487,16 +491,34 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
         return NRF_ERROR_INTERNAL;
     }
 
+    // Read OTP memory and fetch calibration values
+    dwt_otpread(OTP_EUID_ADDR_L, otp_memory, OTP_MEMORY_MAX_ADDR);
+
+    if (otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
+        tx_ant_dly_ch5 = otp_memory[OTP_CH5_ANT_DLY_ADDR] & 0xFFFF;
+        rx_ant_dly_ch5 = (otp_memory[OTP_CH5_ANT_DLY_ADDR] >> 16) & 0xFFFF;
+    }
+    if (otp_memory[OTP_CH9_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
+        tx_ant_dly_ch9 = otp_memory[OTP_CH9_ANT_DLY_ADDR] & 0xFFFF;
+        rx_ant_dly_ch9 = (otp_memory[OTP_CH9_ANT_DLY_ADDR] >> 16) & 0xFFFF;
+    }
+    if (otp_memory[OTP_CH5_PWR_ADDR] != EMPTY_OTP_VAL) {
+        tx_config_ch5.power = otp_memory[OTP_CH5_PWR_ADDR];
+    }
+    if (otp_memory[OTP_CH9_PWR_ADDR] != EMPTY_OTP_VAL) {
+        tx_config_ch9.power = otp_memory[OTP_CH9_PWR_ADDR];
+    }
+
     // Configure uwb tx power & pulse shape
     if (channel == 5) {
         dwt_configuretxrf(&tx_config_ch5);
         dwt_set_alternative_pulse_shape(0);
-        NRF_LOG_INFO("UWB Tx power: %x", tx_config_ch5.power);
+        NRF_LOG_DEBUG("UWB Tx power: %x", tx_config_ch5.power);
     }
     else if (channel == 9) {
         dwt_configuretxrf(&tx_config_ch9);
         dwt_set_alternative_pulse_shape(1);
-        NRF_LOG_INFO("UWB Tx power: %x", tx_config_ch9.power);
+        NRF_LOG_DEBUG("UWB Tx power: %x", tx_config_ch9.power);
     }
     else {
         NRF_LOG_ERROR("dwt_configuretxrf failed");
@@ -504,9 +526,20 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     }
 
     // Configure antenna delays
-    dwt_setrxantennadelay(RX_ANT_DLY & 0xFFFF);
-    dwt_settxantennadelay(TX_ANT_DLY & 0xFFFF);
-    NRF_LOG_DEBUG("UWB Rx Ant delay: 0x%08x, Tx Ant delay 0x%08x", RX_ANT_DLY, TX_ANT_DLY);
+    if (channel == 5) {
+        dwt_setrxantennadelay(rx_ant_dly_ch5);
+        dwt_settxantennadelay(tx_ant_dly_ch5);
+        NRF_LOG_DEBUG("UWB Rx Ant delay: 0x%08x, Tx Ant delay 0x%08x", rx_ant_dly_ch5, tx_ant_dly_ch5);
+    }
+    else if (channel == 9) {
+        dwt_setrxantennadelay(rx_ant_dly_ch9);
+        dwt_settxantennadelay(tx_ant_dly_ch9);
+        NRF_LOG_DEBUG("UWB Rx Ant delay: 0x%08x, Tx Ant delay 0x%08x", rx_ant_dly_ch9, tx_ant_dly_ch9);
+    }
+    else {
+        NRF_LOG_ERROR("dwt_setrxantennadelay/dwt_settxantennadelay failed");
+        return NRF_ERROR_INTERNAL;
+    }
 
     // Configure filter
     if (m_uwb_drv_range.sw_cfg.filter_enabled) {
