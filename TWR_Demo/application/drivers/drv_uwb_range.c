@@ -52,7 +52,7 @@ static volatile uint8_t is_uwb_sleeping = 0;
 static uint32_t poll_tx_timestamp_u32, poll_rx_timestamp_u32, resp_tx_timestamp_u32, resp_rx_timestamp_u32;
 static uint64_t poll_rx_timestamp_u64;
 static uint64_t resp_tx_timestamp_u64;
-static uint32_t frame_sn;                   /**< Frame counter */
+static uint32_t frame_sn; /**< Frame counter */
 static uint16_t tx_ant_dly = TX_ANT_DLY;
 static uint16_t rx_ant_dly = RX_ANT_DLY;
 
@@ -138,7 +138,7 @@ static void resp_msg_set_ts(uint8_t *ts_field, const uint64_t ts) {
 }
 
 static uint32_t uwb_wake_up(void) {
-    uint16_t wake_up_cpt =0;
+    uint16_t wake_up_cpt = 0;
 
     dwt_wakeup_ic();
 
@@ -149,7 +149,7 @@ static uint32_t uwb_wake_up(void) {
         if (wake_up_cpt >= 200) {
             return NRF_ERROR_INTERNAL;
         }
-    }; 
+    };
 
     return NRF_SUCCESS;
 }
@@ -205,10 +205,8 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
 
     // Action depending on the role.....
     switch (sw_cfg.role) {
-    case TWR_INITIATOR:
-    {
-        if (rxmsg_ll.messageData[0] == SIMPLE_MSG_ANCH_RESP)
-        {
+    case TWR_INITIATOR: {
+        if (rxmsg_ll.messageData[0] == SIMPLE_MSG_ANCH_RESP) {
             int32_t rtd_init, rtd_resp;
             float clock_offset_ratio;
             double tof;
@@ -251,10 +249,8 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
         }
     } break;
 
-    case TWR_RESPONDER:
-    {
-        if (rxmsg_ll.messageData[0] == SIMPLE_MSG_TAG_POLL)
-        {
+    case TWR_RESPONDER: {
+        if (rxmsg_ll.messageData[0] == SIMPLE_MSG_TAG_POLL) {
             uint32_t resp_tx_time;
             int ret;
 
@@ -341,7 +337,7 @@ static void cb_rx_to(const dwt_cb_data_t *rxd) {
 /**@brief RX error event
  */
 static void cb_rx_err(const dwt_cb_data_t *rxd) {
-     NRF_LOG_DEBUG("cb_rx_err event received");
+    NRF_LOG_DEBUG("cb_rx_err event received");
 
     switch (sw_cfg.role) {
     case TWR_INITIATOR:
@@ -381,7 +377,7 @@ static void cb_spi_ready(const dwt_cb_data_t *cb_data) {
     dwt_restoreconfig();
 
     //set EUI as it will not be preserved unless the EUI is programmed and loaded from NVM
-     dwt_seteui(sw_cfg.src_address);
+    dwt_seteui(sw_cfg.src_address);
 
     is_uwb_sleeping = 0; // device is awake
 }
@@ -478,16 +474,14 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
         tx_config.PGdly = 0x34;
         dwt_configuretxrf(&tx_config);
         dwt_set_alternative_pulse_shape(0);
-    }
-    else if (channel == 9) {
+    } else if (channel == 9) {
         if (otp_memory[OTP_CH9_PWR_ADDR] != EMPTY_OTP_VAL) {
             tx_config.power = otp_memory[OTP_CH9_PWR_ADDR];
         }
         tx_config.PGdly = 0x27;
         dwt_configuretxrf(&tx_config);
         dwt_set_alternative_pulse_shape(1);
-    }
-    else {
+    } else {
         NRF_LOG_ERROR("dwt_configuretxrf failed");
         return NRF_ERROR_INTERNAL;
     }
@@ -501,16 +495,14 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
         }
         dwt_setrxantennadelay(rx_ant_dly);
         dwt_settxantennadelay(tx_ant_dly);
-    }
-    else if (channel == 9) {
+    } else if (channel == 9) {
         if (otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
             rx_ant_dly = (otp_memory[OTP_CH9_ANT_DLY_ADDR] >> 16) & 0xFFFF;
             tx_ant_dly = otp_memory[OTP_CH9_ANT_DLY_ADDR] & 0xFFFF;
         }
         dwt_setrxantennadelay(rx_ant_dly);
         dwt_settxantennadelay(tx_ant_dly);
-    }
-    else {
+    } else {
         NRF_LOG_ERROR("dwt_setrxantennadelay/dwt_settxantennadelay failed");
         return NRF_ERROR_INTERNAL;
     }

@@ -17,11 +17,14 @@
  *
  *****************************************************************************/
 
- #include <stdint.h>
-#include <string.h>
 #include "app_error.h"
 #include "app_scheduler.h"
 #include "app_timer.h"
+#include "boards.h"
+#include "m_accelerometer.h"
+#include "m_batt_meas.h"
+#include "m_ble_mgmt.h"
+#include "m_uwb_range.h"
 #include "nrf.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
@@ -30,11 +33,8 @@
 #include "nrf_log_default_backends.h"
 #include "nrf_pwr_mgmt.h"
 #include "nrf_sdm.h"
-#include "boards.h"
-#include "m_accelerometer.h"
-#include "m_batt_meas.h"
-#include "m_ble_mgmt.h"
-#include "m_uwb_range.h"
+#include <stdint.h>
+#include <string.h>
 
 #define DEAD_BEEF 0xDEADBEEF /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
