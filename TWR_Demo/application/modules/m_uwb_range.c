@@ -236,8 +236,6 @@ static void drv_uwb_range_evt_handler(drv_uwb_range_evt_t const *p_evt) {
  * and disable when not requested to save power. 
  */
 static void ble_range_evt_handler(ble_range_t *p_range, ble_range_evt_t *p_evt) {
-    uint32_t err_code;
-
     switch (p_evt->evt_type) {
 #if defined(USE_LEGACY_BLE_RANGE_SERVICE)
     case BLE_RANGE_EVT_INST_NOTIFICATION_ENABLED:
@@ -438,26 +436,18 @@ uint32_t m_range_init(m_uwb_range_init_t *p_params, m_ble_service_handle_t *p_ha
 }
 
 uint32_t m_range_start(void) {
-    uint32_t err_code;
-
-    err_code = range_start();
-    VERIFY_SUCCESS(err_code);
+    VERIFY_SUCCESS(range_start());
 
     return NRF_SUCCESS;
 }
 
 uint32_t m_range_stop(void) {
-    uint32_t err_code;
-
-    err_code = range_stop();
-    VERIFY_SUCCESS(err_code);
+    VERIFY_SUCCESS(range_stop());
 
     return NRF_SUCCESS;
 }
 
 uint32_t m_range_ble_uuid_get(uint16_t *uuid) {
-    uint32_t err_code;
-
     *uuid = BLE_UUID_RANGE_SERVICE;
 
     return NRF_SUCCESS;
