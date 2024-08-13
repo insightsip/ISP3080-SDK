@@ -77,14 +77,20 @@
 /* Receive response timeout. */
 #define RESP_RX_TIMEOUT_UUS 400
 
-/*Should be accurately calculated during calibration*/
+/* Default Antenna delays */
 #if defined(BOARD_ISP3080_UX_TG)
-#define TX_ANT_DLY 14445
-#define RX_ANT_DLY 18385
+#define DEFAULT_TX_ANT_DLY 14445
+#define DEFAULT_RX_ANT_DLY 18385
 #elif defined(BOARD_ISP3080_UX_AN)
-#define TX_ANT_DLY 14453
-#define RX_ANT_DLY 18394
+#define DEFAULT_TX_ANT_DLY 14453
+#define DEFAULT_RX_ANT_DLY 18394
 #endif
+
+/* Default TX powers */
+#define DEFAULT_CH5_PWR 0xf2f2f0f2 /**< Default TX power value for channel 5 */
+#define DEFAULT_CH9_PWR 0xa2a2a0a2 /**< Default TX power value for channel 9 */
+#define DEFAULT_CH5_PGDLY 0x34     /**< Default PG Delay value for channel 5 */
+#define DEFAULT_CH9_PGDLY 0x27     /**< Default TX power value for channel 9 */
 
 // OTP memory address list
 #define OTP_EUID_ADDR_L 0x00     /**< First 4 Bytes of 64 bit EUID OTP address */

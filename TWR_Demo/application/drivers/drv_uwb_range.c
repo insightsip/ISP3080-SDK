@@ -53,8 +53,8 @@ static uint32_t poll_tx_timestamp_u32, poll_rx_timestamp_u32, resp_tx_timestamp_
 static uint64_t poll_rx_timestamp_u64;
 static uint64_t resp_tx_timestamp_u64;
 static uint32_t frame_sn; /**< Frame counter */
-static uint16_t tx_ant_dly = TX_ANT_DLY;
-static uint16_t rx_ant_dly = RX_ANT_DLY;
+static uint16_t tx_ant_dly;
+static uint16_t rx_ant_dly;
 
 static dwt_config_t uwb_config = {
     5,                /* Channel number. */
@@ -73,9 +73,9 @@ static dwt_config_t uwb_config = {
 };
 
 static dwt_txconfig_t tx_config = {
-    0x34,       /* PG delay. */
-    0xa2a2a2a2, /* TX power. */
-    0x0         /*PG count*/
+    DEFAULT_CH5_PGDLY,  /* PG delay. */
+    DEFAULT_CH5_PWR,    /* TX power. */
+    0x0                 /* PG count. */
 };
 
 static uint64_t get_rx_timestamp_u64(void) {
@@ -468,17 +468,13 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
 
     // Configure uwb tx power & pulse shape
     if (channel == 5) {
-        if (otp_memory[OTP_CH5_PWR_ADDR] != EMPTY_OTP_VAL) {
-            tx_config.power = otp_memory[OTP_CH5_PWR_ADDR];
-        }
-        tx_config.PGdly = 0x34;
+        tx_config.power = otp_memory[OTP_CH5_PWR_ADDR] != EMPTY_OTP_VAL? otp_memory[OTP_CH5_PWR_ADDR] : DEFAULT_CH5_PWR;
+        tx_config.PGdly = DEFAULT_CH5_PGDLY;
         dwt_configuretxrf(&tx_config);
         dwt_set_alternative_pulse_shape(0);
     } else if (channel == 9) {
-        if (otp_memory[OTP_CH9_PWR_ADDR] != EMPTY_OTP_VAL) {
-            tx_config.power = otp_memory[OTP_CH9_PWR_ADDR];
-        }
-        tx_config.PGdly = 0x27;
+        tx_config.power = otp_memory[OTP_CH9_PWR_ADDR] != EMPTY_OTP_VAL? otp_memory[OTP_CH9_PWR_ADDR] : DEFAULT_CH9_PWR;
+        tx_config.PGdly = DEFAULT_CH9_PGDLY;
         dwt_configuretxrf(&tx_config);
         dwt_set_alternative_pulse_shape(1);
     } else {
@@ -489,17 +485,13 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
 
     // Configure antenna delays
     if (channel == 5) {
-        if (otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
-            rx_ant_dly = (otp_memory[OTP_CH5_ANT_DLY_ADDR] >> 16) & 0xFFFF;
-            tx_ant_dly = otp_memory[OTP_CH5_ANT_DLY_ADDR] & 0xFFFF;
-        }
+        rx_ant_dly = otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL? (otp_memory[OTP_CH5_ANT_DLY_ADDR] >> 16) & 0xFFFF : DEFAULT_RX_ANT_DLY;
+        tx_ant_dly = otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL? otp_memory[OTP_CH5_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_TX_ANT_DLY;
         dwt_setrxantennadelay(rx_ant_dly);
         dwt_settxantennadelay(tx_ant_dly);
     } else if (channel == 9) {
-        if (otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL) {
-            rx_ant_dly = (otp_memory[OTP_CH9_ANT_DLY_ADDR] >> 16) & 0xFFFF;
-            tx_ant_dly = otp_memory[OTP_CH9_ANT_DLY_ADDR] & 0xFFFF;
-        }
+        rx_ant_dly = otp_memory[OTP_CH9_ANT_DLY_ADDR] != EMPTY_OTP_VAL? (otp_memory[OTP_CH9_ANT_DLY_ADDR] >> 16) & 0xFFFF : DEFAULT_RX_ANT_DLY;
+        tx_ant_dly = otp_memory[OTP_CH9_ANT_DLY_ADDR] != EMPTY_OTP_VAL? otp_memory[OTP_CH9_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_TX_ANT_DLY;
         dwt_setrxantennadelay(rx_ant_dly);
         dwt_settxantennadelay(tx_ant_dly);
     } else {
