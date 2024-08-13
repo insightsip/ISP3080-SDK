@@ -77,14 +77,45 @@
 /* Receive response timeout. */
 #define RESP_RX_TIMEOUT_UUS 400
 
-/*Should be accurately calculated during calibration*/
+/* Default Antenna delays */
 #if defined(BOARD_ISP3080_UX_TG)
-#define TX_ANT_DLY 14445
-#define RX_ANT_DLY 18385
+#define DEFAULT_TX_ANT_DLY 14445
+#define DEFAULT_RX_ANT_DLY 18385
 #elif defined(BOARD_ISP3080_UX_AN)
-#define TX_ANT_DLY 14453
-#define RX_ANT_DLY 18394
+#define DEFAULT_TX_ANT_DLY 14453
+#define DEFAULT_RX_ANT_DLY 18394
 #endif
+
+/* Default TX powers */
+#define DEFAULT_CH5_PWR 0xf2f2f0f2 /**< Default TX power value for channel 5 */
+#define DEFAULT_CH9_PWR 0xa2a2a0a2 /**< Default TX power value for channel 9 */
+#define DEFAULT_CH5_PGDLY 0x34     /**< Default PG Delay value for channel 5 */
+#define DEFAULT_CH9_PGDLY 0x27     /**< Default TX power value for channel 9 */
+
+// OTP memory address list
+#define OTP_EUID_ADDR_L 0x00     /**< First 4 Bytes of 64 bit EUID OTP address */
+#define OTP_EUID_ADDR_H 0x01     /**< Last 4 Bytes of 64 bit EUID OTP address */
+#define OTP_ALT_EUID_ADDR_L 0x02 /**< First 4 Bytes of alternative 64 bit EUID OTP address */
+#define OTP_ALT_EUID_ADDR_H 0x03 /**< Last 4 Bytes of alternative 64 bit EUID OTP address */
+//Reserved
+#define OTP_CH5_ANT_DLY_ADDR 0x10 /**< Channel 5 antenna delay OTP address */
+#define OTP_CH9_ANT_DLY_ADDR 0x11 /**< Channel 9 antenna delay OTP address */
+#define OTP_CUST12_ADDR 0x12      /**< Customer OTP address */
+#define OTP_CUST13_ADDR 0x13      /**< Customer OTP address */
+#define OTP_CH5_PWR_ADDR 0x14     /**< Channel 5 TX Power OTP address */
+#define OTP_CH9_PWR_ADDR 0x15     /**< Channel 9 TX Powe OTP address */
+#define OTP_CUST16_ADDR 0x16      /**< Customer OTP address */
+#define OTP_CUST17_ADDR 0x17      /**< Customer OTP address */
+#define OTP_CUST18_ADDR 0x18      /**< Customer OTP address */
+#define OTP_CUST19_ADDR 0x19      /**< Customer OTP address */
+#define OTP_CUST1A_ADDR 0x1A      /**< Customer OTP address */
+#define OTP_CUST1B_ADDR 0x1B      /**< Customer OTP address */
+#define OTP_CUST1C_ADDR 0x1C      /**< Customer OTP address */
+#define OTP_CUST1D_ADDR 0x1D      /**< Customer OTP address */
+#define OTP_XTAL_ADDR 0x1E        /**< XTAL trim OTP address */
+#define OTP_REV_ADDR 0x1E         /**< Revision OTP address */
+#define OTP_MEMORY_MAX_ADDR 0x1F
+#define EMPTY_OTP_VAL 0
 
 // simple 802.15.4 frame structure - using long addresses
 typedef struct
@@ -132,6 +163,7 @@ typedef struct
 {
     drv_uwb_range_evt_handler_t evt_handler; /**< Event handler - called after a pin interrupt has been detected. */
     drv_uwb_range_role_t role;
+    uint8_t channel;
     uint8_t const *own_address;
     uint8_t const *reply_address;
     bool enable_sleep;

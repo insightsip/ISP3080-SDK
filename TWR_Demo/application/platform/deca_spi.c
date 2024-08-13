@@ -46,10 +46,10 @@ static uint8_t itempbuf[DATALEN1] = { 0 }; // As that will use the stack from th
  *
  *******************************************************************************/
 
-/* @fn    nrf52840_dk_spi_init
- * Initialise nRF52840-DK SPI
+/* @fn    nrf52833_dk_spi_init
+ * Initialise nRF52833-DK SPI
  * */
-void nrf52840_dk_spi_init(void)
+void nrf52833_dk_spi_init(void)
 {
     nrf_drv_spi_t *spi_inst;
     nrf_drv_spi_config_t *spi_config;

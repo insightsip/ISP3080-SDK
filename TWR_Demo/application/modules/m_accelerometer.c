@@ -63,8 +63,8 @@ static stmdev_ctx_t dev_ctx = {
 /**@brief GPIOTE event handler, executed in interrupt-context.
  */
 static void gpiote_evt_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
-     NRF_LOG_INFO("Interrupt detected on pin %d", pin);
-     //TODO
+    NRF_LOG_INFO("Interrupt detected on pin %d", pin);
+    //TODO
 }
 
 uint32_t m_accelerometer_init(void) {
@@ -80,7 +80,7 @@ uint32_t m_accelerometer_init(void) {
         NRF_GPIO_PIN_D0S1,
         NRF_GPIO_PIN_NOSENSE);
     nrf_gpio_pin_set(PIN_LIS2DE12_EN);
-    nrf_delay_ms(5);
+    nrf_delay_ms(7);
 
     // Configure interrupts
     if (!nrfx_gpiote_is_init()) {
@@ -142,7 +142,7 @@ uint32_t m_accelerometer_activity_detection_start(void) {
     nrf_drv_twi_enable(&m_twi);
 
     // Enable activity interrupt on INT2 pin.
-    lis2de12_ctrl_reg6_t pin_int2_cfg = { .i2_act = 1 };
+    lis2de12_ctrl_reg6_t pin_int2_cfg = {.i2_act = 1};
     lis2de12_pin_int2_config_set(&dev_ctx, &pin_int2_cfg);
 
     // Set threshold & timeout for activity detection

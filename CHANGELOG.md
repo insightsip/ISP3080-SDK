@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0] 2024-08-13
+
+### Added
+
+- Add an option to build the TWR_Demo project using UWB channel 5 or 9
+- Add default TX power values for channel 5 and 9.
+
+### Changed
+
+- During initialization TX power and antenna delay values are now fetched from QM33110W's OTP memory instead of a fix value.
+- Minor code improvements
+
+### Fixed
+
+- Increase lisde12 power delay. The previous delay was not enough for the device to properly boots.
+
 ## [1.1.0] 2024-07-10
 
 ### Changed
