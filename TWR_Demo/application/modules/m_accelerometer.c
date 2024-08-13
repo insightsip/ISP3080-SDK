@@ -80,7 +80,7 @@ uint32_t m_accelerometer_init(void) {
         NRF_GPIO_PIN_D0S1,
         NRF_GPIO_PIN_NOSENSE);
     nrf_gpio_pin_set(PIN_LIS2DE12_EN);
-    nrf_delay_ms(5);
+    nrf_delay_ms(7);
 
     // Configure interrupts
     if (!nrfx_gpiote_is_init()) {
