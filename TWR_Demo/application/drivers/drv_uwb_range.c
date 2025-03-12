@@ -83,7 +83,7 @@ static uint64_t get_rx_timestamp_u64(void) {
     uint64_t ts = 0;
     int i;
 
-    dwt_readrxtimestamp(ts_tab);
+    dwt_readrxtimestamp(ts_tab, 0);
     for (i = 4; i > -1; i--) {
         ts <<= 8;
         ts |= ts_tab[i];
@@ -212,7 +212,7 @@ static void cb_rx_done(const dwt_cb_data_t *rxd) {
             double tof;
 
             // Retrieve poll transmission and response reception timestamps.
-            poll_rx_timestamp_u32 = dwt_readrxtimestamplo32();
+            poll_rx_timestamp_u32 = dwt_readrxtimestamplo32(0);
             poll_tx_timestamp_u32 = dwt_readtxtimestamplo32();
 
             /* Read carrier integrator value and calculate clock offset ratio */
@@ -374,7 +374,7 @@ static void cb_spi_ready(const dwt_cb_data_t *cb_data) {
     };
 
     /* Restore the required configurations on wake */
-    dwt_restoreconfig();
+    dwt_restoreconfig(1);
 
     //set EUI as it will not be preserved unless the EUI is programmed and loaded from NVM
     dwt_seteui(sw_cfg.src_address);
@@ -386,6 +386,7 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     uint32_t err_code;
     uint8_t channel;
     uint32_t otp_memory[OTP_MEMORY_MAX_ADDR];
+    dwt_callbacks_s cbs = {NULL};
 
     VERIFY_PARAM_NOT_NULL(p_params);
     VERIFY_PARAM_NOT_NULL(p_params->evt_handler);
@@ -450,7 +451,14 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
     // Configure interrupts
     dwt_setinterrupt(DWT_INT_ARFE_BIT_MASK | DWT_INT_TXFRS_BIT_MASK | DWT_INT_RXFCG_BIT_MASK | DWT_INT_RXFTO_BIT_MASK | DWT_INT_RXPTO_BIT_MASK | DWT_INT_RXPHE_BIT_MASK | DWT_INT_RXFCE_BIT_MASK | DWT_INT_RXFSL_BIT_MASK | DWT_INT_RXSTO_BIT_MASK,
         0, DWT_ENABLE_INT);
-    dwt_setcallbacks(cb_tx_done, cb_rx_done, cb_rx_to, cb_rx_err, NULL, &cb_spi_ready, NULL);
+
+    // Define all the callback functions that will be called by the DW IC driver as a result of DW IC events.
+    cbs.cbTxDone = cb_tx_done;
+    cbs.cbRxOk = cb_rx_done;
+    cbs.cbRxTo = cb_rx_to;
+    cbs.cbRxErr = cb_rx_err;
+    cbs.cbSPIRdy = cb_spi_ready;
+    dwt_setcallbacks(&cbs);
 
     // Install DW IC IRQ handler.
     port_set_dwic_isr(dwt_isr);
