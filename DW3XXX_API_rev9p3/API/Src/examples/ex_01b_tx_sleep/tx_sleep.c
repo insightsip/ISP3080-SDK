@@ -2,13 +2,11 @@
  *  @file    tx_sleep.c
  *  @brief   TX with sleep example code
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -55,21 +53,40 @@ static uint8_t tx_msg[] = { 0xC5, 0, 'D', 'E', 'C', 'A', 'W', 'A', 'V', 'E' };
 #define FRAME_LENGTH sizeof(tx_msg) + FCS_LEN // The real length that is going to be transmitted
 
 /* Inter-frame delay period, in milliseconds. */
-#define TX_DELAY_MS 1000
+#define TX_DELAY_MS  2400000
 
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
  * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
 extern dwt_txconfig_t txconfig_options;
+static int tx_done=0;
+static int spi_ready=0;
+
+static void tx_conf_cb(const dwt_cb_data_t *cb_data){
+  test_run_info((unsigned char *)"tx_conf_cb");
+  tx_done=1;
+}
+
+static void spi_rdy_cb(const dwt_cb_data_t *cb_data){
+  test_run_info((unsigned char *)"spi_rdy_cb");
+  spi_ready=1;
+}
+dwt_callbacks_s dwcb = {
+    .cbTxDone = tx_conf_cb,
+    .cbSPIRdy = spi_rdy_cb,
+};
 
 /**
  * Application entry point.
  */
 int tx_sleep(void)
 {
+ uint32_t dev_id;
+  int  err; 
+
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -88,6 +105,9 @@ int tx_sleep(void)
         while (1) { };
     }
 
+ dev_id = dwt_readdevid();
+printf("%x\n", dev_id);
+
     /* Configure DW IC. See NOTE 6 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
@@ -103,11 +123,30 @@ int tx_sleep(void)
      * so that as frames are transmitted the TX LED flashes.
      * dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
      */
-    dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
+   // dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
 
     /* Configure sleep and wake-up parameters. */
     /* DWT_PGFCAL is added to make sure receiver is re-enabled on wake. */
-    dwt_configuresleep(DWT_CONFIG | DWT_PGFCAL, DWT_PRES_SLEEP | DWT_WAKE_CSN | DWT_WAKE_WUP | DWT_SLP_EN);
+    dwt_configuresleep(DWT_CONFIG | DWT_PGFCAL, DWT_PRES_SLEEP | DWT_WAKE_CSN | DWT_WAKE_WUP | DWT_SLP_EN | DWT_SLEEP);
+
+    dwt_setcallbacks(&dwcb);
+    // Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and RX errors).
+    dwt_setinterrupt(DWT_INT_SPIRDY_BIT_MASK | DWT_INT_TXFRS_BIT_MASK,  0, DWT_ENABLE_INT);
+    dwt_writesysstatuslo(DWT_INT_RCINIT_BIT_MASK | DWT_INT_SPIRDY_BIT_MASK | DWT_INT_TXFRS_BIT_MASK);
+     port_set_dwic_isr(dwt_isr);
+
+      //dwt_starttx(DWT_START_TX_IMMEDIATE);
+      //  while(!tx_done) 
+      //  {
+      // }
+      //  // Sleep(200); /* If using LEDs we need to add small delay to see the TX LED blink */
+
+      //  /* Put DW IC to sleep. Go to IDLE state after wakeup*/
+      //  dwt_entersleep(DWT_DW_IDLE_RC);
+      //while(1){
+      //__WFE();
+      //}
+
 
     /* Loop forever sending frames periodically. */
     while (TRUE)
@@ -122,29 +161,50 @@ int tx_sleep(void)
 
         /* Start transmission. */
         dwt_starttx(DWT_START_TX_IMMEDIATE);
+        test_run_info((unsigned char *)"dwt_starttx");
 
         /* Poll DW IC until TX frame sent event set. See NOTE 4 below.
          * STATUS register is 5 bytes long but, as the event we are looking at is in the first byte of the register, we can use this simplest API
          * function to access it.*/
-        waitforsysstatus(NULL, NULL, DWT_INT_TXFRS_BIT_MASK, 0);
+     //   waitforsysstatus(NULL, NULL, DWT_INT_TXFRS_BIT_MASK, 0);
+      while(!tx_done) 
+        {
+       }
+        // Sleep(200); /* If using LEDs we need to add small delay to see the TX LED blink */
 
         /* Put DW IC to sleep. Go to IDLE state after wakeup*/
-        dwt_entersleep(DWT_DW_IDLE);
+        dwt_entersleep(DWT_DW_IDLE_RC);
 
         /* Execute a delay between transmissions. */
         Sleep(TX_DELAY_MS);
 
         /* Wake DW IC up. See NOTE 5 below. */
+          spi_ready=0;
         dwt_wakeup_ic();
 
-        Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)
+       // Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)
 
-        while (!dwt_checkidlerc()) // check in IDLE_RC before proceeding
+          
+           
+      while(!spi_ready) 
         {
-        }
+         printf("spi_ready looping\n");
+          Sleep(1000);
+       }
+
+       /* while (!dwt_checkidlerc()) // check in IDLE_RC before proceeding
+        {
+            printf("dwt_checkidlerc looping\n");
+        }*/
+
+        do{
+            dev_id = dwt_readdevid();
+            printf("%x\n", dev_id);
+            nrf_delay_us(1000);
+        }while(dev_id != 0xdeca0304 && dev_id != 0xdeca0302);
 
         /* Restore the required configurations on wake */
-        dwt_restoreconfig();
+        dwt_restoreconfig(1);
 
         /* Increment the blink frame sequence number (modulo 256). */
         tx_msg[BLINK_FRAME_SN_IDX]++;
@@ -156,7 +216,7 @@ int tx_sleep(void)
  *
  * 1. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
+ *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 2. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.

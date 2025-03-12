@@ -4,13 +4,11 @@
  *           trigger a SPI write error interrupt event in the status register if the DW3000's own CRC generated on the transaction
  *           data does not match the CRC byte sent from the host.
  *
- * @attention
- *
- * Copyright 2018 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -19,12 +17,11 @@
 #include <example_selection.h>
 #include <port.h>
 #include <shared_defines.h>
+#include "deca_private.h"
 
 #if defined(TEST_SPI_CRC)
 
 extern void test_run_info(unsigned char *data);
-extern void dwt_writetodevice(uint32_t regFileID, uint16_t index, uint16_t length, uint8_t *buffer);
-extern void dwt_readfromdevice(uint32_t regFileID, uint16_t index, uint16_t length, uint8_t *buffer);
 
 /* Example application name and version to display on LCD screen. */
 #define APP_NAME "SPI CRC EX"
@@ -47,7 +44,7 @@ int spi_crc(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
 
     port_set_dw_ic_spi_slowrate(); // NOTE: the max SPI rate is 20 MHz when using SPI CRC mode
 
@@ -66,7 +63,7 @@ int spi_crc(void)
         while (1) { };
     }
 
-    /* see NOTE 1. */
+    /* See NOTE 1. */
 
     /* dwt_enablespicrccheck will enable SPI CRC check in DW3000 */
     dwt_enablespicrccheck(DWT_SPI_CRC_MODE_WRRD, &spi_rd_err_cb);

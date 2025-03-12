@@ -2,13 +2,11 @@
  *  @file    simple_tx_aes.c
  *  @brief   Simple TX + AES example code
  *
- * @attention
- *
- * Copyright 2018 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -120,7 +118,7 @@ int simple_tx_aes(void)
         while (TRUE) { };
     }
 
-    /* Configure DW3000. */
+    /* Configure DW IC. See NOTE 2 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -131,8 +129,8 @@ int simple_tx_aes(void)
     // configure the tx spectrum parameters (power and PG delay)
     dwt_configuretxrf(&txconfig_options);
 
-    dwt_set_keyreg_128(&aes_key);
-    dwt_configure_aes(&aes_config);
+    dwt_set_keyreg_128((dwt_aes_key_t *)&aes_key);
+    dwt_configure_aes((dwt_aes_config_t *)&aes_config);
 
     /* Fill aes job to do */
     aes_job.nonce = nonce;               /* use constructed nonce to encrypt payload */
@@ -177,7 +175,10 @@ int simple_tx_aes(void)
             { // There were no errors
                 /* START TX */
                 dwt_starttx(DWT_START_TX_IMMEDIATE);
-                /* function to access it.*/
+                /* Poll DW IC until TX frame sent event set. See NOTE 3 below.
+                * STATUS register is 4 bytes long but, as the event we are looking
+                * at is in the first byte of the register, we can use this simplest
+                * API function to access it.*/
                 waitforsysstatus(NULL, NULL, DWT_INT_TXFRS_BIT_MASK, 0);
                 /* Clear TX frame sent event. */
                 dwt_writesysstatuslo(DWT_INT_TXFRS_BIT_MASK);
@@ -199,7 +200,10 @@ int simple_tx_aes(void)
  * NOTES:
  * 1.In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *   the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
- *
+ * 2. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *    configuration.
+ * 3. We use polled mode of operation here to keep the example as simple as possible, but the TXFRS status event can be used to generate an interrupt.
+ *    Please refer to DW IC User Manual for more details on "interrupts".
+ * 
  * TODO: Correct and/or required notes for this example can be added later.
- *
  ****************************************************************************************************************************************************/

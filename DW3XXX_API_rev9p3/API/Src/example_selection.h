@@ -2,11 +2,10 @@
  * @file    example_selection.h
  * @brief   Example selection is configured here
  *
- * @attention
+ * @author Decawave
  *
- * Copyright 2013 - 2021(c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
  */
 
@@ -18,7 +17,7 @@ extern "C"
 {
 #endif
 
-// Enable the needed example/test. Please enable only one example/test!
+    // Enable the needed example/test. Please enable only one example/test!
 
 #define TEST_READING_DEV_ID
 //#define TEST_SIMPLE_TX
@@ -28,6 +27,7 @@ extern "C"
 //#define TEST_TX_SLEEP_AUTO
 //#define TEST_TX_SLEEP_TIMED
 //#define TEST_TX_WITH_CCA
+//#define TEST_SIMPLE_TX_AUTOMOTIVE
 
 //#define TEST_SIMPLE_RX
 //#define TEST_SIMPLE_RX_NLOS
@@ -36,6 +36,7 @@ extern "C"
 //#define TEST_DOUBLE_BUFFER_RX
 //#define TEST_RX_TRIM
 //#define TEST_SIMPLE_RX_PDOA
+//#define TEST_SIMPLE_RX_CIR
 
 //#define TEST_SIMPLE_TX_STS_SDC
 //#define TEST_SIMPLE_RX_STS_SDC
@@ -46,6 +47,7 @@ extern "C"
 //#define TEST_TX_WAIT_RESP
 //#define TEST_TX_WAIT_RESP_INT
 //#define TEST_RX_SEND_RESP
+//#define TEST_RX_ADC_CAPTURE
 
 //#define TEST_CONTINUOUS_WAVE
 //#define TEST_CONTINUOUS_FRAME
@@ -87,7 +89,11 @@ extern "C"
 
 //#define TEST_BW_CAL
 
+//#define TEST_FRAME_FILTERING_TX
+//#define TEST_FRAME_FILTERING_RX
+
 //#define TEST_TX_POWER_ADJUSTMENT
+//#define TEST_LINEAR_TX_POWER
 
 //#define TEST_SIMPLE_AES
 #ifdef __cplusplus

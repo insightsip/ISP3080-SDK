@@ -2,13 +2,11 @@
  *  @file    otp_write.c
  *  @brief   This example writes to the OTP memory and check if the write was successful.
  *
- * @attention
- *
- * Copyright 2018 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -35,7 +33,7 @@ int otp_write(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */

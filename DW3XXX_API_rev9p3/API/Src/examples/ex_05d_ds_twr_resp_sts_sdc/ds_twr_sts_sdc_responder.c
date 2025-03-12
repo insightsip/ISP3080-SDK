@@ -12,13 +12,11 @@
  * Note: As STS is used, the receptions are considered valid if and only if the STS quality index is good. Then the STS timestamp is read and used for the TWR
  * range calculation. Please see note below on Super Deterministic Code (SDC).
  *
- * @attention
- *
- * Copyright 2017 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -102,7 +100,7 @@ static double tof;
 static double distance;
 
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
- * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
+ * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 7 below. */
 extern dwt_txconfig_t txconfig_options;
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -120,7 +118,7 @@ int ds_twr_sts_sdc_responder(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -139,7 +137,7 @@ int ds_twr_sts_sdc_responder(void)
         while (1) { };
     }
 
-    /* Configure DW IC. See NOTE 15 below. */
+    /* Configure DW IC. See NOTE 13 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -184,10 +182,10 @@ int ds_twr_sts_sdc_responder(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             // as STS mode is used, we only consider frames that are received with good STS quality
-            if (((goodSts = dwt_readstsquality(&stsQual)) >= 0) && (dwt_readstsstatus(&stsStatus, 0) == DWT_SUCCESS)) // if STS is good this will be true >= 0
+            if (((goodSts = dwt_readstsquality(&stsQual, 0)) >= 0) && (dwt_readstsstatus(&stsStatus, 0) == DWT_SUCCESS)) // if STS is good this will be true >= 0
             {
                 /* A frame has been received, read it into the local buffer. */
-                frame_len = dwt_getframelength();
+                frame_len = dwt_getframelength(0);
                 if (frame_len <= RX_BUF_LEN)
                 {
                     dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -238,11 +236,11 @@ int ds_twr_sts_sdc_responder(void)
                         dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK | DWT_INT_TXFRS_BIT_MASK);
 
                         // as STS mode is used, we only consider frames that are received with good STS quality
-                        if (((goodSts = dwt_readstsquality(&stsQual)) >= 0)
+                        if (((goodSts = dwt_readstsquality(&stsQual, 0)) >= 0)
                             && (dwt_readstsstatus(&stsStatus, 0) == DWT_SUCCESS)) // if STS is good this will be true >= 0
                         {
                             /* A frame has been received, read it into the local buffer. */
-                            frame_len = dwt_getframelength();
+                            frame_len = dwt_getframelength(0);
                             if (frame_len <= RX_BUF_LEN)
                             {
                                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -279,6 +277,10 @@ int ds_twr_sts_sdc_responder(void)
 
                                 tof = tof_dtu * DWT_TIME_UNITS;
                                 distance = tof * SPEED_OF_LIGHT;
+
+                                /* Display computed distance on LCD. */
+                                // sprintf(dist_str, "DIST: %3.2f m", distance);
+                                // test_run_info(dist_str);
 
                                 range_ok = 1;
                             }
@@ -385,10 +387,6 @@ int ds_twr_sts_sdc_responder(void)
  * 12. The high order byte of each 40-bit time-stamps is discarded here. This is acceptable as, on each device, those time-stamps are not separated by
  *     more than 2**32 device time units (which is around 67 ms) which means that the calculation of the round-trip delays can be handled by a 32-bit
  *     subtraction.
- * 13. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW3000 API Guide for more details on the DW3000 driver functions.
- * 14. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 36 MHz can be used
- *     thereafter.
- * 15. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ * 13.Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *     configuration.
  ****************************************************************************************************************************************************/

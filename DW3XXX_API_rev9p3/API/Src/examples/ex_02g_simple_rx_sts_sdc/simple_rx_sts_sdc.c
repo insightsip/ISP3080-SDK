@@ -2,13 +2,11 @@
  *  @file    simple_rx_sts_sdc.c
  *  @brief   Simple RX example code that utilises STS with deterministic code.
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -28,7 +26,7 @@ extern void test_run_info(unsigned char *data);
 /* Example application name */
 #define APP_NAME "RX 4Z STS v1.0"
 
-/* Default communication configuration. We use default non-STS DW mode. */
+/* Default communication configuration. We use STS with SDC DW mode. */
 static dwt_config_t config = {
     5,               /* Channel number. */
     DWT_PLEN_128,    /* Preamble length. Used in TX only. */
@@ -40,7 +38,7 @@ static dwt_config_t config = {
     DWT_PHRMODE_STD, /* PHY header mode. */
     DWT_PHRRATE_STD, /* PHY header rate. */
     (129 + 8 - 8),   /* SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only. */
-    DWT_STS_MODE_1 | DWT_STS_MODE_SDC, /* Use STS. See NOTE 5 & 6 below. */
+    DWT_STS_MODE_1 | DWT_STS_MODE_SDC, /* Use STS. See NOTE 4 & 5 below. */
     DWT_STS_LEN_64,                    /* STS length see allowed values in Enum dwt_sts_lengths_e */
     DWT_PDOA_M0                        /* PDOA mode off */
 };
@@ -52,10 +50,10 @@ static dwt_config_t config = {
 static uint8_t rx_buffer[FRAME_LEN_MAX];
 
 /* Hold copy of status register state here for reference so that it can be examined at a debug breakpoint. */
-static uint32_t status_reg;
+static uint32_t status_reg; // = 0;
 
 /* Hold copy of frame length of frame received (if good) so that it can be examined at a debug breakpoint. */
-static uint16_t frame_len;
+static uint16_t frame_len; // = 0;
 
 /**
  * Application entry point.
@@ -69,7 +67,7 @@ int simple_rx_sts_sdc(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -121,9 +119,10 @@ int simple_rx_sts_sdc(void)
         if (status_reg & DWT_INT_RXFCG_BIT_MASK)
         {
             /* A frame has been received, copy it to our local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= FRAME_LEN_MAX)
             {
+                // if (USING_CRC_LEN) frame_len-=FCS_LEN; /* No need to read the CRC. This example uses CRC */
                 dwt_readrxdata(rx_buffer, frame_len - FCS_LEN, 0); /* No need to read the FCS/CRC. */
             }
 
@@ -131,7 +130,7 @@ int simple_rx_sts_sdc(void)
              * Need to check the STS has been received and is good. - this will always be true in this example
              * as companion example 1g is sending STS with SDC - using same deterministic code
              */
-            if (((goodSts = dwt_readstsquality(&stsQual)) >= 0) && (dwt_readstsstatus(&stsStatus, 0) == DWT_SUCCESS))
+            if (((goodSts = dwt_readstsquality(&stsQual, 0)) >= 0) && (dwt_readstsstatus(&stsStatus, 0) == DWT_SUCCESS))
             {
                 test_run_info((unsigned char *)"STS is GOOD ");
             }
@@ -162,7 +161,7 @@ int simple_rx_sts_sdc(void)
  *    interrupts. Please refer to DW IC User Manual for more details on "interrupts".
  * 4. This example code functions in the same manner as the simple_rx.c test code, however instead of using no STS, it uses the new 4z STS
  *    that was introduced in IEEE 802.15.4z
- * 5. Since this example is using STS, it will be using one of the newer packet formats that were introduced in IEEE 802.15.4z.
+ * 5. Since this example is using STS, it will be using one of the newer frame formats that were introduced in IEEE 802.15.4z.
  *    It will use packet configuration 1 which looks like:
  *    ---------------------------------------------------
  *    | Ipatov Preamble | SFD | STS | PHR | PHY Payload |

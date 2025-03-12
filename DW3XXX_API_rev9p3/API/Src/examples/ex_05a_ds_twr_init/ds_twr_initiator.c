@@ -9,13 +9,11 @@
  *           time-stamp for the final message itself. The companion "DS TWR responder" example application works out the time-of-flight over-the-air
  *           and, thus, the estimated distance between the two devices.
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -33,6 +31,9 @@ extern void test_run_info(unsigned char *data);
 
 /* Example application name and version to display on LCD screen. */
 #define APP_NAME "DS TWR INIT v1.0"
+
+/* If this define is enabled then the device will sleep->wakeup->restoreconfig*/
+#define SLEEP_EN 0
 
 /* Default communication configuration. We use default non-STS DW mode. */
 static dwt_config_t config = {
@@ -114,7 +115,7 @@ int ds_twr_initiator(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -133,7 +134,7 @@ int ds_twr_initiator(void)
         while (1) { };
     }
 
-    /* Configure DW IC. See NOTE 2 below. */
+    /* Configure DW IC. See NOTE 14 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -185,7 +186,7 @@ int ds_twr_initiator(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK | DWT_INT_TXFRS_BIT_MASK);
 
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= RX_BUF_LEN)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -240,9 +241,28 @@ int ds_twr_initiator(void)
             /* Clear RX error/timeout events in the DW IC status register. */
             dwt_writesysstatuslo(SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR | DWT_INT_TXFRS_BIT_MASK);
         }
+     
+#if SLEEP_EN
+        /* Put DW IC to sleep. Go to IDLE state after wakeup*/
+        dwt_entersleep(DWT_DW_IDLE);
 
         /* Execute a delay between ranging exchanges. */
         Sleep(RNG_DELAY_MS);
+
+        /* Wake DW IC up. See NOTE 6 below. */
+        dwt_wakeup_ic();
+
+        /* Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)*/
+        Sleep(2);
+
+        while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */ { };
+
+        /* Restore the required configurations on wake up*/
+        dwt_restoreconfig(1);
+#else
+        /* Execute a delay between ranging exchanges. */
+        Sleep(RNG_DELAY_MS);
+#endif
     }
 }
 #endif
@@ -309,8 +329,7 @@ int ds_twr_initiator(void)
  * 5. This timeout is for complete reception of a frame, i.e. timeout duration must take into account the length of the expected frame. Here the value
  *    is arbitrary but chosen large enough to make sure that there is enough time to receive the complete response frame sent by the responder at the
  *    6.81 Mbps data rate used (around 300 us).
- * 6. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 36 MHz can be used
- *    thereafter.
+ * 6. The chosen method for waking the DW IC up here is by toggling the WAKEUP pin high for at least 500 us.
  * 7. The preamble timeout allows the receiver to stop listening in situations where preamble is not starting (which might be because the responder is
  *    out of range or did not receive the message to respond to). This saves the power waste of listening for a message that is not coming. We
  *    recommend a minimum preamble timeout of 5 PACs for short range applications and a larger value (e.g. in the range of 50% to 80% of the preamble
@@ -321,9 +340,9 @@ int ds_twr_initiator(void)
  *    automatically appended by the DW IC. This means that our variable could be two bytes shorter without losing any data (but the sizeof would not
  *    work anymore then as we would still have to indicate the full length of the frame to dwt_writetxdata()).
  * 10. We use polled mode of operation here to keep the example as simple as possible but all status events can be used to generate interrupts. Please
- *    refer to DW IC User Manual for more details on "interrupts". It is also to be noted that STATUS register is 5 bytes long but, as the event we
- *    use are all in the first bytes of the register, we can use the simple dwt_read32bitreg() API call to access it instead of reading the whole 5
- *    bytes.
+ *     refer to DW IC User Manual for more details on "interrupts". It is also to be noted that STATUS register is 5 bytes long but, as the event we
+ *     use are all in the first bytes of the register, we can use the simple dwt_read32bitreg() API call to access it instead of reading the whole 5
+ *     bytes.
  * 11. As we want to send final TX timestamp in the final message, we have to compute it in advance instead of relying on the reading of DW IC
  *     register. Timestamps and delayed transmission time are both expressed in device time units so we just have to add the desired response delay to
  *     response RX timestamp to get final transmission time. The delayed transmission time resolution is 512 device time units which means that the
@@ -338,6 +357,6 @@ int ds_twr_initiator(void)
  *     ranging exchange to try another one after 1 second. If this error handling code was not here, a late dwt_starttx() would result in the code
  *     flow getting stuck waiting for a TX frame sent event that will never come. The companion "responder" example (ex_05b) should timeout from
  *     awaiting the "final" and proceed to have its receiver on ready to poll of the following exchange.
- * 14. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
+ * 14. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *     configuration.
  ****************************************************************************************************************************************************/

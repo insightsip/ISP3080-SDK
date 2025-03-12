@@ -2,11 +2,10 @@
  * @file    example_info.h
  * @brief
  *
- * @attention
+ * @author Decawave
  *
- * Copyright 2013-2018(c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
  */
 
@@ -76,6 +75,13 @@ void build_examples(void)
     test_cnt++;
 #endif
 
+#ifdef TEST_SIMPLE_RX_CIR
+    extern int simple_rx_cir(void);
+
+    example_pointer = simple_rx_cir;
+    test_cnt++;
+#endif
+
 #ifdef TEST_TX_SLEEP
     extern int tx_sleep(void);
 
@@ -115,6 +121,13 @@ void build_examples(void)
     extern int simple_tx_aes(void);
 
     example_pointer = simple_tx_aes;
+    test_cnt++;
+#endif
+
+#ifdef TEST_SIMPLE_TX_AUTOMOTIVE
+    extern int simple_tx_automotive(void);
+
+    example_pointer = simple_tx_automotive;
     test_cnt++;
 #endif
 
@@ -391,6 +404,20 @@ void build_examples(void)
     extern int simple_aes(void);
 
     example_pointer = simple_aes;
+    test_cnt++;
+#endif
+
+#ifdef TEST_LINEAR_TX_POWER
+    extern int linear_tx_power_example(void);
+
+    example_pointer = linear_tx_power_example;
+    test_cnt++;
+#endif
+
+#ifdef TEST_RX_ADC_CAPTURE
+    extern int rx_adc_capture(void);
+
+    example_pointer = rx_adc_capture;
     test_cnt++;
 #endif
     // Check that only 1 test was enabled in test_selection.h file

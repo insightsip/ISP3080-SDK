@@ -8,13 +8,11 @@
  *           re-calibrated. The current temperature is then recorded and the
  *           process is repeated.
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -61,7 +59,7 @@ int pll_cal(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -80,7 +78,7 @@ int pll_cal(void)
         while (1) { };
     }
 
-    /* Configure DW IC. See note 1 below*/
+    /* Configure DW IC. See NOTE 1 below*/
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {

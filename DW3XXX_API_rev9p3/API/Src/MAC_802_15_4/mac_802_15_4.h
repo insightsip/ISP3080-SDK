@@ -2,11 +2,10 @@
  * @file    mac_802_15_4.h
  * @brief   Functions that handle 802.15.4 frame
  *
- * @attention
+ * @author Decawave
  *
- * Copyright 2013-2019(c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
  */
 

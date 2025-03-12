@@ -1,3 +1,13 @@
+/*! ----------------------------------------------------------------------------
+ * @file    mac_802_15_8.h
+ * @brief   Functions that handle 802.15.8 frame
+ *
+ * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
+ */
 #ifndef _802_15_8_
 #define _802_15_8_
 

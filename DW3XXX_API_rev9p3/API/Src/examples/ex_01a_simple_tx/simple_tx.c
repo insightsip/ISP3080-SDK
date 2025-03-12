@@ -2,13 +2,11 @@
  *  @file    simple_tx.c
  *  @brief   Simple TX example code
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -25,6 +23,8 @@ extern void test_run_info(unsigned char *data);
 
 /* Example application name */
 #define APP_NAME "SIMPLE TX v1.0"
+
+#define USE_SPI2 0 // set this to 1 to use DW37X0 SPI2
 
 /* Default communication configuration. We use default non-STS DW mode. */
 static dwt_config_t config = {
@@ -66,12 +66,15 @@ extern dwt_txconfig_t txconfig_options;
  */
 int simple_tx(void)
 {
+#if USE_SPI2
+    uint8_t sema_res;
+#endif
     uint32_t dev_id;
 
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -83,6 +86,35 @@ int simple_tx(void)
     dwt_probe((struct dwt_probe_s *)&dw3000_probe_interf);
 
     dev_id = dwt_readdevid();
+    if (dev_id == (uint32_t)DWT_DW3720_PDOA_DEV_ID)
+    {
+        /* If host is using SPI 2 to connect to DW3000 the code in the USE_SPI2 above should be set to 1 */
+#if USE_SPI2
+        change_SPI(SPI_2);
+
+        /* Configure SPI rate, DW3000 supports up to 38 MHz */
+        port_set_dw_ic_spi_fastrate();
+
+        /* Reset DW IC */
+        reset_DWIC(); /* Target specific drive of RSTn line into DW IC low for a period. */
+
+        Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)
+
+        /* If host is using SPI 2 to connect to DW3000 the it needs to request access or force access */
+
+        sema_res = dwt_ds_sema_status();
+
+        if ((sema_res & (0x2)) == 0) // the SPI2 is free
+        {
+            dwt_ds_sema_request();
+        }
+        else
+        {
+            test_run_info((unsigned char *)"SPI2 IS NOT FREE"); // If SPI2 is not free the host can force access
+            while (1) { };
+        }
+#endif
+    }
 
     while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */ { };
 
@@ -92,8 +124,11 @@ int simple_tx(void)
         while (1) { };
     }
 
+    /* If host is using SPI 2 to connect to DW3000 then the GPIOs are used for SPI2 and LEDs functionality cannot be used */
+#if USE_SPI2 == 0
     /* Enabling LEDs here for debug so that for each TX the D1 LED will flash on DW3000 red eval-shield boards. */
     dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
+#endif
 
     /* Configure DW IC. See NOTE 5 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
@@ -145,7 +180,7 @@ int simple_tx(void)
  *
  * 1. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else�s implementation. We recommended that
+ *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 2. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.

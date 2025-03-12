@@ -1,17 +1,15 @@
 /*! ----------------------------------------------------------------------------
- *  @file    ex_04b_main.c
+ *  @file    continuous_frame.c
  *  @brief   Continuous frame mode example code
  *
  *           This example application enables continuous frame mode to transmit frames without interruption for 2 minutes before stopping all
  *           operation.
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -32,7 +30,7 @@ extern void test_run_info(unsigned char *data);
 /* Continuous frame duration, in milliseconds. */
 #define CONT_FRAME_DURATION_MS 120000
 
-/* Default communication configuration. See NOTE 1 below. */
+/* Default communication configuration. We use default non-STS DW mode. See NOTE 1 below. */
 static dwt_config_t config = {
     5,                /* Channel number. */
     DWT_PLEN_128,     /* Preamble length. Used in TX only. */
@@ -69,7 +67,7 @@ int continuous_frame_example(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -127,16 +125,13 @@ int continuous_frame_example(void)
  * NOTES:
  *
  * 1. Continuous frame mode is typically used to tune transmit power for regulatory purposes. This example has been designed to reproduce the use case
- *    of a tag blinking at a high rate: the blink length is around 180 µs in this configuration, emitted once per millisecond. In this configuration,
+ *    of a tag blinking at a high rate: the blink length is around 180 us in this configuration, emitted once per millisecond. In this configuration,
  *    the frame's transmission power can be increased while still complying with regulations. For more details about the management of TX power, the
  *    user is referred to DW IC User Manual.
  * 2. The user is referred to DW IC User Manual for references values applicable to different channels and/or PRF. Those reference values may need to
  *    be tuned for optimum performance and regulatory approval depending on the target product design.
  * 3. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
+ *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone elses implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
- * 4. In this example, the DW IC is left in INIT state after calling dwt_initialise(), because only the slow SPI speed is used, i.e. <= 6 MHz
- * 5. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
  ****************************************************************************************************************************************************/

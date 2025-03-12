@@ -6,13 +6,11 @@
  *           examples activates interrupt handling and the double buffering feature of the DW IC (either auto or manual re-enable of receiver can be used).
  *           Frame processing is performed in the RX good frame callback.
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -65,6 +63,8 @@ static void rx_err_cb(const dwt_cb_data_t *cb_data);
 int double_buffer_rx(void)
 {
     uint32_t dev_id;
+    dwt_callbacks_s cbs = {NULL};
+
     /* Sends application name to test_run_info function. */
     test_run_info((unsigned char *)APP_NAME);
 
@@ -105,8 +105,12 @@ int double_buffer_rx(void)
             while (1) { };
         }
 
+        /* Define all the callback functions that will be called by the DW IC driver as a result of DW IC events. */
+        cbs.cbRxOk = rx_ok_cb;
+        cbs.cbRxErr = rx_err_cb;
+
         /* Register RX call-back. When using automatic RX re-enable is used below the RX error will not be reported */
-        dwt_setcallbacks(NULL, rx_ok_cb, NULL, rx_err_cb, NULL, NULL, NULL);
+        dwt_setcallbacks(&cbs);
 
         /*Clearing the SPI ready interrupt*/
         dwt_writesysstatuslo(DWT_INT_RCINIT_BIT_MASK | DWT_INT_SPIRDY_BIT_MASK);
@@ -125,14 +129,14 @@ int double_buffer_rx(void)
         port_set_dwic_isr(dwt_isr);
 
 #if (USE_MANUAL_RX_ENABLE == 0)
-        dwt_setdblrxbuffmode(DBL_BUF_STATE_EN, DBL_BUF_MODE_AUTO); // Enable double buffer - auto RX re-enable mode, see NOTE 4.
+        dwt_setdblrxbuffmode(DBL_BUF_STATE_EN, DBL_BUF_MODE_AUTO); // Enable double buffer - auto RX re-enable mode, see NOTE 3.
 #else
-        dwt_setdblrxbuffmode(DBL_BUF_STATE_EN, DBL_BUF_MODE_MAN); // Enable double buffer - manual RX re-enable mode, see NOTE 4.
+        dwt_setdblrxbuffmode(DBL_BUF_STATE_EN, DBL_BUF_MODE_MAN); // Enable double buffer - manual RX re-enable mode, see NOTE 3.
 #endif
 
         dwt_rxenable(DWT_START_RX_IMMEDIATE); // Enable RX
 
-        /* Loop forever receiving frames. See NOTE 4 below. */
+        /* Loop forever receiving frames. See NOTE 2 below. */
         while (1) { };
     }
 }
@@ -154,7 +158,7 @@ static void rx_ok_cb(const dwt_cb_data_t *cb_data)
 #endif
     /* TESTING BREAKPOINT LOCATION #1 */
 
-    /* A frame has been received, copy it to our local buffer. See NOTE 5 below. */
+    /* A frame has been received, copy it to our local buffer. See NOTE 4 below. */
     if (cb_data->datalength <= FRAME_LEN_MAX)
     {
         dwt_readrxdata(rx_buffer, cb_data->datalength, 0);
@@ -184,12 +188,9 @@ static void rx_err_cb(const dwt_cb_data_t *cb_data)
  *
  * 1. In this example, maximum frame length is set to 127 bytes which is 802.15.4 UWB standard maximum frame length. DW IC supports an extended
  *    frame length (up to 1023 bytes long) mode which is not used in this example.
- * 2. This example shows how automatic or manual reception activation is performed. The DW IC offers several other features that can be used to handle more
- *    complex scenarios or to optimise system's overall performance (e.g. timeout after a given time, etc.).
- *    DW30xx only supports manual re-enable mode. DW37xx supports both modes.
- * 3. There is nothing to do in the loop here as frame reception and RX re-enabling is automatic and switching inside the INT. In a less trivial real-world
+ * 2. There is nothing to do in the loop here as frame reception and RX re-enabling is automatic and switching inside the INT. In a less trivial real-world
  *    application the RX data callback would generally signal the reception event to some background protocol layer to further process each RX frame.
- * 4. When using double buffering either a manual or automatic mode can be used. In the manual mode, the RX can be re-enabled before reading all the frame
+ * 3. When using double buffering either a manual or automatic mode can be used. In the manual mode, the RX can be re-enabled before reading all the frame
  *    data as this is precisely the purpose of having two buffers.
  *    All the registers needed to process the received frame are also double buffered with the exception of the CIR memory, and can be accessed by calling
  *    dwt_readdiagnostics.
@@ -203,10 +204,6 @@ static void rx_err_cb(const dwt_cb_data_t *cb_data)
  *    and then re-enable the receiver to receive the next packet into the other RX buffer & diagnostics set. If both RX buffers are full, waiting for host to
  *    process them,
  *    the device will trigger an RX overrun event and wait for a free buffer before proceeding to receive any further packets.
- * 5. A real application might get an operating system (OS) buffer for this data reading and then pass the buffer onto a queue into the next layer
+ * 4. A real application might get an operating system (OS) buffer for this data reading and then pass the buffer onto a queue into the next layer
  *    of processing task via an appropriate OS call.
- * 6. The user is referred to DecaRanging ARM application for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
- * 7. This mode of operation - double buffer with auto RX re-enable, can be used in TDOA anchor which does not care about RX errors and just reports good
- *    receptions.
  ****************************************************************************************************************************************************/

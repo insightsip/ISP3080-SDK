@@ -10,20 +10,18 @@
  *
  *           This example utilises the 802.15.4z STS to accomplish secure timestamps between the initiator and responder. A 32-bit STS counter
  *           is part of the STS IV used to generate the scrambled timestamp sequence (STS) in the transmitted packet and to cross correlate in the
- *           receiver. This count normally advances by 1 for every 1024 chips (~2µs) of STS in BPRF mode, and by 1 for every 5124 chips (~1µs) of STS
+ *           receiver. This count normally advances by 1 for every 1024 chips (~2ï¿½s) of STS in BPRF mode, and by 1 for every 5124 chips (~1ï¿½s) of STS
  *           in HPRF mode. If both devices (initiator and responder) have count values that are synced, then the communication between devices should
  *           result in secure timestamps which can be used to calculate distance. If not, then the devices need to re-sync their STS counter values.
  *           In this example, the initiator will send a plain-text value of it's 32-bit STS counter inside the "poll" frame. The receiver first
  *           checks the quality of the STS of the received frame. If the received frame has bad STS quality, it can then use the plain-text
  *           counter value received to adjust it's own STS counter value to match. This means that the next message in the sequence should be in sync again.
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <config_options.h>
@@ -154,7 +152,7 @@ int ds_twr_responder_sts(void)
     /* Display application name on UART. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
 #ifdef CONFIG_SPI_FAST_RATE
     port_set_dw_ic_spi_fastrate();
 #endif /* CONFIG_SPI_FAST_RATE */
@@ -190,7 +188,7 @@ int ds_twr_responder_sts(void)
         while (1) { };
     }
 
-    /* Configure the TX spectrum parameters (power, PG delay and PG count) */
+    /* Configure the TX spectrum parameters (power, PG delay and PG count). See NOTE 5 below. */
     if (config_options.chan == 5)
     {
         dwt_configuretxrf(&txconfig_options);
@@ -215,7 +213,7 @@ int ds_twr_responder_sts(void)
     {
         /*
          * Set CP encryption key and IV (nonce).
-         * See Note 16 below.
+         * See Note 11 below.
          */
         if (!messageFlag)
         {
@@ -253,7 +251,7 @@ int ds_twr_responder_sts(void)
         /*
          * Need to check the STS has been received and is good.
          */
-        goodSts = dwt_readstsquality(&stsQual);
+        goodSts = dwt_readstsquality(&stsQual, 0);
 
         /*
          * Check for a good frame and STS count.
@@ -266,7 +264,7 @@ int ds_twr_responder_sts(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= sizeof(rx_buffer))
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -339,12 +337,12 @@ int ds_twr_responder_sts(void)
                     resp_tx_ts = get_tx_timestamp_u64();
                     final_rx_ts = get_rx_timestamp_u64();
 
-                    /* Get timestamps embedded in the final message. */
+                    /* Get timestamps embedded in the final message. See NOTE 12 below. */
                     final_msg_get_ts(&rx_buffer[FINAL_MSG_POLL_TX_TS_IDX], &poll_tx_ts);
                     final_msg_get_ts(&rx_buffer[FINAL_MSG_RESP_RX_TS_IDX], &resp_rx_ts);
                     final_msg_get_ts(&rx_buffer[FINAL_MSG_FINAL_TX_TS_IDX], &final_tx_ts);
 
-                    /* Compute time of flight. 32-bit subtractions give correct answers even if clock has wrapped. See NOTE 15 below. */
+                    /* Compute time of flight. 32-bit subtractions give correct answers even if clock has wrapped. See NOTEs 7 & 15 below. */
                     poll_rx_ts_32 = (uint32_t)poll_rx_ts;
                     resp_tx_ts_32 = (uint32_t)resp_tx_ts;
                     final_rx_ts_32 = (uint32_t)final_rx_ts;
@@ -497,10 +495,13 @@ int ds_twr_responder_sts(void)
  *     ranging exchange and simply goes back to awaiting another poll message. If this error handling code was not here, a late dwt_starttx() would
  *     result in the code flow getting stuck waiting subsequent RX event that will will never come. The companion "initiator" example (ex_06a) should
  *     timeout from awaiting the "response" and proceed to send another poll in due course to initiate another ranging exchange.
- * 11. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
- * 12. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *     thereafter.
+ * 11. This example will set the STS key and IV upon each iteration of the main while loop. While this has the benefit of keeping the STS count in
+ *     sync with the responder device (which does the same), it should be noted that this is not a 'secure' implementation as the count is reset upon
+ *     each iteration of the loop. An attacker could potentially recognise this pattern if the signal was being monitored. While it serves it's
+ *     purpose in this simple example, it should not be utilised in any final solution.
+ * 12. In this operation, the high order byte of each 40-bit timestamps is discarded. This is acceptable as those time-stamps are not separated by
+ *     more than 2**32 device time units (which is around 67 ms) which means that the calculation of the round-trip delays (needed in the
+ *     time-of-flight computation) can be handled by a 32-bit subtraction.
  * 13. This example uses STS with a packet configuration of mode 1 which looks like so:
  *    ---------------------------------------------------
  *    | Ipatov Preamble | SFD | STS | PHR | PHY Payload |
@@ -513,11 +514,4 @@ int ds_twr_responder_sts(void)
  *    of sync with each other, the STS will not align correctly - thus we get no secure timestamp values.
  * 14. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *     configuration.
- * 15. In this operation, the high order byte of each 40-bit timestamps is discarded. This is acceptable as those time-stamps are not separated by
- *     more than 2**32 device time units (which is around 67 ms) which means that the calculation of the round-trip delays (needed in the
- *     time-of-flight computation) can be handled by a 32-bit subtraction.
- * 16. This example will set the STS key and IV upon each iteration of the main while loop. While this has the benefit of keeping the STS count in
- *     sync with the responder device (which does the same), it should be noted that this is not a 'secure' implementation as the count is reset upon
- *     each iteration of the loop. An attacker could potentially recognise this pattern if the signal was being monitored. While it serves it's
- *     purpose in this simple example, it should not be utilised in any final solution.
  ****************************************************************************************************************************************************/

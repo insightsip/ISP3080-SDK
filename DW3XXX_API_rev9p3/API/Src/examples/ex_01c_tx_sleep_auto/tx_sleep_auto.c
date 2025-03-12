@@ -2,13 +2,11 @@
  *  @file    tx_sleep_auto.c
  *  @brief   TX with auto sleep example code
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -67,7 +65,7 @@ int tx_sleep_auto(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -138,7 +136,7 @@ int tx_sleep_auto(void)
         while (!dwt_checkidlerc()) { };
 
         /* Restore the required configurations on wake */
-        dwt_restoreconfig();
+        dwt_restoreconfig(1);
 
         /* Increment the blink frame sequence number (modulo 256). */
         tx_msg[BLINK_FRAME_SN_IDX]++;
@@ -150,7 +148,7 @@ int tx_sleep_auto(void)
  *
  * 1. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
+ *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 2. The chosen method for waking the DW IC up here is by maintaining SPI chip select line low for at least 500 us. This means that we need a buffer
  *    to collect the data that DW IC outputs during this dummy SPI transaction. The length of the transaction, and then the time for which the SPI

@@ -4,13 +4,11 @@
  *           device will remain in IDLE_RC state after wakeup and automatically
  *           turn on and cal PLL before TX starts.
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -71,7 +69,7 @@ int tx_sleep_idleRC(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -112,7 +110,7 @@ int tx_sleep_idleRC(void)
     dwt_configuresleep(DWT_CONFIG | DWT_PGFCAL, DWT_PRES_SLEEP | DWT_WAKE_CSN | DWT_WAKE_WUP | DWT_SLP_EN);
 
     /* Loop forever sending frames periodically. */
-  //  while (1)
+    while (1)
     {
         /* Write frame data to DW IC and prepare transmission. See NOTE 3 below. */
         dwt_writetxdata(FRAME_LENGTH - FCS_LEN, tx_msg, 0); /* Zero offset in TX buffer. Data does not include the CRC*/
@@ -130,44 +128,37 @@ int tx_sleep_idleRC(void)
          * function to access it.*/
         waitforsysstatus(NULL, NULL, DWT_INT_TXFRS_BIT_MASK, 0);
 
+        // Sleep(200); /* If using LEDs we need to add small delay to see the TX LED blink */
+
         /* Put device into IDLE_RC before going to SLEEP*/
         /* Put DW IC to sleep. */
         dwt_entersleep(DWT_DW_IDLE_RC);
 
         /* Execute a delay between transmissions. */
-      //  Sleep(TX_DELAY_MS);
+        Sleep(TX_DELAY_MS);
 
         /* Wake DW IC up. See NOTE 5 below. */
-     //   dwt_wakeup_ic();
+        dwt_wakeup_ic();
 
-     //   Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)
+        Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)
 
         /* Need to make sure DW IC is in IDLE_RC before proceeding */
-      //  while (!dwt_checkidlerc()) { };
+        while (!dwt_checkidlerc()) { };
 
         /* Restore the required configurations on wake */
-     //   dwt_restoreconfig();
+        dwt_restoreconfig(1);
 
         /* Increment the blink frame sequence number (modulo 256). */
-    //    tx_msg[BLINK_FRAME_SN_IDX]++;
+        tx_msg[BLINK_FRAME_SN_IDX]++;
     }
-NRF_POWER->SYSTEMOFF=1;
-    nrf_gpio_cfg_default(DW3000_CS_Pin);
-    while(1) {
-     // Wait for an event.
-        __WFE();
-        // Clear the internal event register.
-        __SEV();
-        __WFE();
-        }
 }
 #endif
 /*****************************************************************************************************************************************************
- * NOTES: TODO review these
+ * NOTES: 
  *
  * 1. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
+ *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 2. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.

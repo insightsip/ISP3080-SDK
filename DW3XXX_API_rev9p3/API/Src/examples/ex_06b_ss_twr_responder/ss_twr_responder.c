@@ -8,13 +8,11 @@
  *           including the calculated/predicted TX time-stamp for the response message itself. The companion "SS TWR initiator" example application
  *           works out the time-of-flight over-the-air and, thus, the estimated distance between the two devices.
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -98,7 +96,7 @@ int ss_twr_responder(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset and initialize DW chip. */
@@ -119,7 +117,7 @@ int ss_twr_responder(void)
     /* Enabling LEDs here for debug so that for each TX the D1 LED will flash on DW3000 red eval-shield boards. */
     dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
-    /* Configure DW IC. See NOTE 13 below. */
+    /* Configure DW IC. See NOTE 11 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -155,7 +153,7 @@ int ss_twr_responder(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= sizeof(rx_buffer))
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -178,7 +176,7 @@ int ss_twr_responder(void)
                     /* Response TX timestamp is the transmission time we programmed plus the antenna delay. */
                     resp_tx_ts = (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
 
-                    /* Write all timestamps in the final message. See NOTE 8 below. */
+                    /* Write all timestamps in the final message. See NOTE 7 below. */
                     resp_msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
                     resp_msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], resp_tx_ts);
 
@@ -278,10 +276,6 @@ int ss_twr_responder(void)
  *     ranging exchange and simply goes back to awaiting another poll message. If this error handling code was not here, a late dwt_starttx() would
  *     result in the code flow getting stuck waiting subsequent RX event that will will never come. The companion "initiator" example (ex_06a) should
  *     timeout from awaiting the "response" and proceed to send another poll in due course to initiate another ranging exchange.
- * 11. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
- * 12. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *     thereafter.
- * 13. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ * 11. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *     configuration.
  ****************************************************************************************************************************************************/

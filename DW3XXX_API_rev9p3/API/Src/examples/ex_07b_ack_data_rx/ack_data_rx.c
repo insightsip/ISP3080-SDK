@@ -7,13 +7,11 @@
  *           set in the frame control field, the DW IC will automatically respond with an ACK frame. The code loops after each frame reception to
  *           await another frame.
  *
- * @attention
- *
- * Copyright 2016 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -75,7 +73,7 @@ int ack_data_rx(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -94,7 +92,7 @@ int ack_data_rx(void)
         while (1) { };
     }
 
-    /* Configure DW IC. See NOTE 9 below. */
+    /* Configure DW IC. See NOTE 3 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -105,8 +103,9 @@ int ack_data_rx(void)
     /* Configure the TX spectrum parameters (power, PG delay and PG count) */
     dwt_configuretxrf(&txconfig_options);
 
-    /* Set PAN ID and short address. See NOTE 2 below. */
+    /* Set PAN ID and short address. See NOTE 1 below. */
     dwt_setpanid(PAN_ID);
+    // dwt_seteui(eui);
     dwt_setaddress16(SHORT_ADDR);
 
     /* Configure frame filtering. Only data frames are enabled in this example. Frame filtering must be enabled for Auto ACK to work. */
@@ -135,14 +134,14 @@ int ack_data_rx(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= FRAME_LEN_MAX)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
             }
 
             /* Since the auto ACK feature is enabled, an ACK should be sent if the received frame requests it, so we await the ACK TX completion
-             * before taking next action. See NOTE 8 below. */
+             * before taking next action. See NOTE 7 below. */
             if (rx_buffer[0] & FCTRL_ACK_REQ_MASK)
             {
                 /* Poll DW IC until confirmation of transmission of the ACK frame. */
@@ -165,12 +164,12 @@ int ack_data_rx(void)
  *
  * 1. PAN ID and short address are hard coded constants to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the DW IC
- *    during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that customers
+ *    during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that customers
  *    buy a block of addresses from the IEEE Registration Authority for their production items.
  * 2. In this example, maximum frame length is set to 127 bytes which is 802.15.4z UWB standard maximum frame length. DW IC supports an extended frame
  *    length (up to 1023 bytes long) mode which is not used in this example.
- * 3. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *     thereafter.
+ * 3. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *    configuration.
  * 4. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
  * 5. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
@@ -180,8 +179,4 @@ int ack_data_rx(void)
  * 7. This is the purpose of the AAT bit in DW IC's STATUS register but because of an issue with the operation of AAT, it is simpler to directly
  *    check in the frame control if the ACK request bit is set. Please refer to DW IC User Manual for more details on Auto ACK feature and the AAT
  *    bit.
- * 8. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
- * 9. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
- *    configuration.
  ****************************************************************************************************************************************************/

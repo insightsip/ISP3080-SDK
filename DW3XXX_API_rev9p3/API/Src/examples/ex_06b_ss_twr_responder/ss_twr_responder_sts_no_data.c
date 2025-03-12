@@ -2,12 +2,12 @@
  *  @file    ss_twr_responder_sts_no_data.c
  *  @brief   Single-sided two-way ranging (SS TWR) responder example code
  *
- *           A "packet" refers to a IEEE 802.15.4z STS Mode 3 frame that contains no payload.
+ *           A "packet" refers to a IEEE 802.15.4z STS Mode 3 packets that contains no payload.
  *           A "frame" refers to a IEEE 802.15.4z STS Mode 0/1/2 frame that contains a payload.
  *
  *           This example utilises the 802.15.4z STS to accomplish secure timestamps between the initiator and responder. A 32-bit STS counter
  *           is part of the STS IV used to generate the scrambled timestamp sequence (STS) in the transmitted packet and to cross correlate in the
- *           receiver. This count normally advances by 1 for every 1024 chips (~2µs) of STS in BPRF mode, and by 1 for every 5124 chips (~1µs) of STS
+ *           receiver. This count normally advances by 1 for every 1024 chips (~2us) of STS in BPRF mode, and by 1 for every 5124 chips (~1us) of STS
  *           in HPRF mode. If both devices (initiator and responder) have count values that are synced, then the communication between devices should
  *           result in secure timestamps which can be used to calculate distance. If not, then the devices need to re-sync their STS counter values.
  *
@@ -36,13 +36,11 @@
  *           | SYNC | SFD | STS |
  *           --------------------
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <config_options.h>
@@ -59,7 +57,7 @@
 extern void test_run_info(unsigned char *data);
 
 /* Example application name */
-#define APP_NAME "SS TWR RESP v1.0"
+#define APP_NAME "SS TWR RESP STS NO DATA v1.0"
 
 /* Inter-ranging delay period, in milliseconds. */
 #define RNG_DELAY_MS 1000
@@ -141,7 +139,7 @@ int ss_twr_responder_sts_no_data(void)
     /* Display application name on UART. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
 #ifdef CONFIG_SPI_FAST_RATE
     port_set_dw_ic_spi_fastrate();
 #endif /* CONFIG_SPI_FAST_RATE */
@@ -176,7 +174,7 @@ int ss_twr_responder_sts_no_data(void)
     /* Next can enable TX/RX states output on GPIOs 5 and 6 to help diagnostics, and also TX/RX LEDs */
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
 
-    /* Configure DW IC. See NOTE 12 below. */
+    /* Configure DW IC. See NOTE 10 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config_option_sp3))
     {
@@ -231,7 +229,7 @@ int ss_twr_responder_sts_no_data(void)
         /*
          * Need to check the STS has been received and is good.
          */
-        goodSts = dwt_readstsquality(&stsQual);
+        goodSts = dwt_readstsquality(&stsQual, 0);
 
         /*
          * At this point of the program, we are expecting the POLL packet to be received.
@@ -282,7 +280,7 @@ int ss_twr_responder_sts_no_data(void)
                     /*
                      * Now reconfigure device to SP0 mode and send REPORT frame
                      */
-                    /* Configure DW IC. See NOTE 12 below. */
+                    /* Configure DW IC. See NOTE 10 below. */
                     dwt_configurestsmode(DWT_STS_MODE_OFF);
 
                     /* Set the delay to be twice the previous time period with respect to the RX timestamp of the POLL packet. */
@@ -411,12 +409,10 @@ int ss_twr_responder_sts_no_data(void)
  *     ranging exchange and simply goes back to awaiting another poll packet. If this error handling code was not here, a late dwt_starttx() would
  *     result in the code flow getting stuck waiting subsequent RX event that will will never come. The companion "initiator" example (ex_06a) should
  *     timeout from awaiting the "response" and proceed to send another poll in due course to initiate another ranging exchange.
- * 10. The user is referred to DecaRanging ARM application (distributed with DW3000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
+ * 10. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *     configuration.
  * 11. This example will set the STS key and IV upon each iteration of the main while loop. While this has the benefit of keeping the STS count in
  *     sync with the responder device (which does the same), it should be noted that this is not a 'secure' implementation as the count is reset upon
  *     each iteration of the loop. An attacker could potentially recognise this pattern if the signal was being monitored. While it serves it's
  *     purpose in this simple example, it should not be utilised in any final solution.
- * 12. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
- *     configuration.
  ****************************************************************************************************************************************************/

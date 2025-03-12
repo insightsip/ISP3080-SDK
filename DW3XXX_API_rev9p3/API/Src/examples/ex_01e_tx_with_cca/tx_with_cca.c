@@ -2,7 +2,7 @@
  *  @file    tx_with_cca.c
  *  @brief   Here we implement a simple Clear Channel Assessment (CCA) mechanism
  *           before frame transmission. The CCA can be used to avoid collisions
- *           with other frames on the air. See Note 1 for more details.
+ *           with other frames on the air. See NOTE 1 for more details.
  *
  *           Note this is not doing CCA the way a continuous carrier radio would do it by
  *           looking for energy/carrier in the band. It is only looking for preamble so
@@ -21,13 +21,12 @@
  *           CF example to restart it if they wish to continue observing this pseudo CCA
  *           experiencing an environment of high air-utilisation). Thus the radio configuration
  *           used here matches that of CF example.
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
  *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -101,7 +100,7 @@ int tx_with_cca(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -196,7 +195,7 @@ int tx_with_cca(void)
  *    to continue observing this pseudo CCA experiencing an environment of high air-utilisation).
  * 2. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW3000 unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW3000 during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
+ *    DW3000 during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW3000 User Manual.
  * 3. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW3000 OTP memory.

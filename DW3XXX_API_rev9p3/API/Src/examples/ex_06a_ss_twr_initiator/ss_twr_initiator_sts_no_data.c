@@ -2,12 +2,12 @@
  *  @file    ss_twr_initiator_sts_no_data.c
  *  @brief   Single-sided two-way ranging (SS TWR) initiator example code
  *
- *           A "packet" refers to a IEEE 802.15.4z STS Mode 3 frame that contains no payload.
+ *           A "packet" refers to a IEEE 802.15.4z STS Mode 3 packet that contains no payload.
  *           A "frame" refers to a IEEE 802.15.4z STS Mode 0/1/2 frame that contains a payload.
  *
  *           This example utilises the 802.15.4z STS to accomplish secure timestamps between the initiator and responder. A 32-bit STS counter
  *           is part of the STS IV used to generate the scrambled timestamp sequence (STS) in the transmitted packet and to cross correlate in the
- *           receiver. This count normally advances by 1 for every 1024 chips (~2µs) of STS in BPRF mode, and by 1 for every 512 chips (~1µs) of STS
+ *           receiver. This count normally advances by 1 for every 1024 chips (~2us) of STS in BPRF mode, and by 1 for every 512 chips (~1us) of STS
  *           in HPRF mode. If both devices (initiator and responder) have count values that are synced, then the communication between devices should
  *           result in secure timestamps which can be used to calculate distance. If not, then the devices need to re-sync their STS counter values.
  *
@@ -36,13 +36,11 @@
  *           | SYNC | SFD | STS |
  *           --------------------
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -61,7 +59,7 @@
 extern void test_run_info(unsigned char *data);
 
 /* Example application name */
-#define APP_NAME "SS TWR INIT v1.0"
+#define APP_NAME "SS TWR INIT STS NO DATA v1.0"
 
 /* Inter-ranging delay period, in milliseconds. */
 #define RNG_DELAY_MS 1000
@@ -171,7 +169,7 @@ int ss_twr_initiator_sts_no_data(void)
     /* Display application name on UART. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
 #ifdef CONFIG_SPI_FAST_RATE
     port_set_dw_ic_spi_fastrate();
 #endif /* CONFIG_SPI_FAST_RATE */
@@ -276,7 +274,7 @@ int ss_twr_initiator_sts_no_data(void)
         /*
          * Need to check the STS has been received and is good.
          */
-        goodSts = dwt_readstsquality(&stsQual);
+        goodSts = dwt_readstsquality(&stsQual, 0);
 
         /*
          * Here we are checking for a good packet, a good preamble count and good STS quality.
@@ -293,9 +291,9 @@ int ss_twr_initiator_sts_no_data(void)
             {
                 /* Retrieve poll transmission and response reception timestamps. See NOTE 8 below. */
                 poll_tx_ts = dwt_readtxtimestamplo32();
-                resp_rx_ts = dwt_readrxtimestamplo32();
+                resp_rx_ts = dwt_readrxtimestamplo32(0);
 
-                /* Configure DW IC. See NOTE 2 below. */
+                /* Configure DW IC. See NOTE 15 below. */
                 dwt_configurestsmode(DWT_STS_MODE_OFF);
 
                 /*
@@ -323,7 +321,7 @@ int ss_twr_initiator_sts_no_data(void)
                     dwt_writesysstatuslo(SYS_STATUS_ALL_RX_GOOD);
 
                     /* A frame has been received, read it into the local buffer. */
-                    frame_len = dwt_getframelength();
+                    frame_len = dwt_getframelength(0);
                     if ((frame_len <= sizeof(rx_buffer)) && (frame_len != 0))
                     {
                         dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -436,7 +434,7 @@ int ss_twr_initiator_sts_no_data(void)
  *    after an exchange of specific frames used to define those short addresses for each device participating to the ranging exchange.
  * 5. This timeout is for complete reception of a packet, i.e. timeout duration must take into account the length of the expected packet. Here the value
  *    is arbitrary but chosen large enough to make sure that there is enough time to receive the complete response packet sent by the responder at the
- *    6.8M data rate used (around 1000 µs / 1s).
+ *    6.8M data rate used (around 1000 us / 1s).
  * 6. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
  * 7. We use polled mode of operation here to keep the example as simple as possible but all status events can be used to generate interrupts. Please

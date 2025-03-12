@@ -2,11 +2,10 @@
  * @file    config_options.h
  * @brief   Configuration options are selected here.
  *
- * @attention
+ * @author Decawave
  *
- * Copyright 2019(c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
  */
 

@@ -6,13 +6,11 @@
  *  and then uses the XTAL trimming function to modify the local clock to achieve a target clock offset.
  *  Note: To keep a system stable it is recommended to only adjust trimming at one end of a link.
  *
- *  @attention
+ * @author Decawave
  *
- *  Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
- *  All rights reserved.
- *
- *  @author Decawave
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -80,7 +78,7 @@ int rx_with_xtal_trim(void)
     uint32_t status_reg;
     float trim_calc_val, offset_ppm_calc_val;
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -146,7 +144,7 @@ int rx_with_xtal_trim(void)
              * */
             {
                 /* A frame has been received, copy it to our local buffer. */
-                frame_len = dwt_getframelength();
+                frame_len = dwt_getframelength(0);
                 if (frame_len <= FRAME_LEN_MAX)
                 {
                     dwt_readrxdata(rx_buffer, frame_len, 0);

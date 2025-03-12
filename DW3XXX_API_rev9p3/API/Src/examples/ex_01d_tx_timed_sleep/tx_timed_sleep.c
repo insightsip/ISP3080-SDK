@@ -2,13 +2,11 @@
  *  @file    tx_timed_sleep.c
  *  @brief   TX with timed sleep example code
  *
- * @attention
- *
- * Copyright 2016 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -63,7 +61,7 @@ static uint8_t tx_msg[] = { 0xC5, 0, 'D', 'E', 'C', 'A', 'W', 'A', 'V', 'E', 0, 
 #define SLEEP_TIME_MS (TX_DELAY_MS - 10)
 
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
- * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
+ * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 3 below. */
 extern dwt_txconfig_t txconfig_options;
 
 int sleeping = 0; /* this will be set to 1 in the main as device is put to sleep, and it will be cleared in the callback once device wakes up */
@@ -77,10 +75,12 @@ int tx_timed_sleep(void)
 {
     uint16_t lp_osc_freq, sleep_cnt;
 
+    dwt_callbacks_s cbs = {NULL};
+
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -108,15 +108,19 @@ int tx_timed_sleep(void)
     /* Calibrate and configure sleep count. */
     lp_osc_freq = XTAL_FREQ_HZ / dwt_calibratesleepcnt();
     sleep_cnt = ((SLEEP_TIME_MS * ((uint32_t)lp_osc_freq)) / 1000) >> 12;
+    // sleep_cnt = 0x06; // 1 step is ~ 175ms, 6 ~= 1s
     dwt_configuresleepcnt(sleep_cnt);
 
-    /* Configure DW IC. See NOTE 6 below. */
+    /* Configure DW IC. See NOTE 5 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
         test_run_info((unsigned char *)"CONFIG FAILED     ");
         while (1) { };
     }
+
+    /* Define all the callback functions that will be called by the DW IC driver as a result of DW IC events. */
+    cbs.cbSPIRdy = spi_ready_cb;
 
     /* Configure the TX spectrum parameters (power, PG delay and PG count) */
     dwt_configuretxrf(&txconfig_options);
@@ -126,7 +130,7 @@ int tx_timed_sleep(void)
     dwt_configuresleep(DWT_CONFIG | DWT_PGFCAL, DWT_PRES_SLEEP | DWT_WAKE_CSN | DWT_SLEEP | DWT_SLP_EN);
 
     /* Register the call-backs (only SPI ready callback is used). */
-    dwt_setcallbacks(NULL, NULL, NULL, NULL, NULL, &spi_ready_cb, NULL);
+    dwt_setcallbacks(&cbs);
 
     /* Loop forever sending frames periodically. */
     while (1)
@@ -143,7 +147,7 @@ int tx_timed_sleep(void)
          * If interrupts are enabled, (e.g. if MTXFRS bit is set in the SYS_MASK register) then the TXFRS event will cause an active interrupt and
          * prevent the DW IC from sleeping. */
 
-        /* Poll DW IC until TX frame sent event set. See NOTE 7 below.
+        /* Poll DW IC until TX frame sent event set. See NOTE 6 below.
          * STATUS register is 4 bytes long but, as the event we are looking at is in the first byte of the register, we can use this simplest API
          * function to access it.*/
         waitforsysstatus(NULL, NULL, DWT_INT_TXFRS_BIT_MASK, 0);
@@ -179,7 +183,7 @@ static void spi_ready_cb(const dwt_cb_data_t *cb_data)
     while (!dwt_checkidlerc()) { };
 
     /* Restore the required configurations on wake */
-    dwt_restoreconfig();
+    dwt_restoreconfig(1);
 
     sleeping = 0; // device is awake
 }
@@ -190,7 +194,7 @@ static void spi_ready_cb(const dwt_cb_data_t *cb_data)
  *
  * 1. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
+ *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 2. The sleep counter is 16 bits wide but represents the upper 16 bits of a 28 bits counter. Thus the granularity of this counter is 4096 counts.
  *    Combined with the frequency of the internal RING oscillator being typically between 15 and 34 kHz, this means that the time granularity that we
@@ -201,10 +205,8 @@ static void spi_ready_cb(const dwt_cb_data_t *cb_data)
  * 4. dwt_writetxdata() takes the full size of tx_msg as a parameter but only copies (size - 2) bytes as the check-sum at the end of the frame is
  *    automatically appended by the DW IC. This means that our tx_msg could be two bytes shorter without losing any data (but the sizeof would not
  *    work anymore then as we would still have to indicate the full length of the frame to dwt_writetxdata()).
- * 5. Here we just wait for the DW IC to wake up but, in a practical implementation, this microprocessor could be put to sleep too and waken up using
- *    an interrupt generated by the DW IC waking.
- * 6. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ * 5. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *    configuration.
- * 7. We use polled mode of operation here to keep the example as simple as possible, but the TXFRS status event can be used to generate an interrupt.
+ * 6. We use polled mode of operation here to keep the example as simple as possible, but the TXFRS status event can be used to generate an interrupt.
  *    Please refer to DW IC User Manual for more details on "interrupts".
  ****************************************************************************************************************************************************/

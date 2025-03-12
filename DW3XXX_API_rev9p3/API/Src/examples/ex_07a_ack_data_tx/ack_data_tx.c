@@ -7,13 +7,11 @@
  *           sending of the next frame (increasing the frame sequence number). If the expected valid ACK is not received, the application immediately
  *           retries to send the frame (keeping the same frame sequence number).
  *
- * @attention
- *
- * Copyright 2016 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -78,7 +76,7 @@ static uint8_t tx_msg[] = { 0x61, 0x88, 0, 0xCA, 0xDE, 'X', 'R', 'X', 'T', 'm', 
 /* Inter-frame delay period, in milliseconds. */
 #define TX_DELAY_MS 1000
 
-/* Receive response timeout, expressed in UWB microseconds (UUS, 1 uus = 512/499.2 µs). See NOTE 3 below. */
+/* Receive response timeout, expressed in UWB microseconds (UUS, 1 uus = 512/499.2 us). See NOTE 3 below. */
 #define RX_RESP_TO_UUS 2200
 
 /* Buffer to store received frame. See NOTE 4 below. */
@@ -98,7 +96,7 @@ static uint32_t tx_frame_ack_nb = 0;
 static uint32_t tx_frame_retry_nb = 0;
 
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
- * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
+ * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 5 below. */
 extern dwt_txconfig_t txconfig_options;
 
 /**
@@ -111,7 +109,7 @@ int ack_data_tx(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -132,7 +130,7 @@ int ack_data_tx(void)
         while (1) { };
     }
 
-    /* Configure DW IC. See NOTE 11 below. */
+    /* Configure DW IC. See NOTE 9 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -170,7 +168,7 @@ int ack_data_tx(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* A frame has been received, check frame length is correct for ACK, then read and verify the ACK. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len == ACK_FRAME_LEN)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -220,7 +218,7 @@ int ack_data_tx(void)
  *    while loop, and then timing from the "GO" for a few minutes before breaking in again, and examining the frame counters.
  * 2. Source and destination addresses are hard coded constants to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the DW IC
- *    during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that customers
+ *    during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that customers
  *    buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 3. This timeout is for complete reception of a frame, i.e. timeout duration must take into account the length of the expected frame. Here the value
  *    is arbitrary but chosen large enough to make sure that there is enough time to receive a complete ACK frame sent by the "ACK DATA RX" example
@@ -236,10 +234,6 @@ int ack_data_tx(void)
  *    work anymore then as we would still have to indicate the full length of the frame to dwt_writetxdata()).
  * 8. We use polled mode of operation here to keep the example as simple as possible but all status events can be used to generate interrupts. Please
  *    refer to DW IC User Manual for more details on "interrupts".
- * 9. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
- * 10. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *     thereafter.
- * 11. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ * 9. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *     configuration.
  ****************************************************************************************************************************************************/

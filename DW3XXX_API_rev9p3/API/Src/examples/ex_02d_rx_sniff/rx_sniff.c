@@ -2,13 +2,11 @@
  *  @file    rx_sniff.c
  *  @brief   RX using SNIFF mode example code
  *
- * @attention
- *
- * Copyright 2016 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -45,9 +43,9 @@ static dwt_config_t config = {
 
 /* SNIFF mode on/off times.
  * ON time is expressed in multiples of PAC size (with the IC adding 1 PAC automatically). So the ON time of 1 here gives 2 PAC times and, since the
- * configuration (above) specifies DWT_PAC8, we get an ON time of 2x8 symbols, or around 16 µs.
- * OFF time is expressed in multiples of 128/125 µs (~1 µs).
- * These values will lead to a roughly 50% duty-cycle, each ON and OFF phase lasting for about 16 µs. */
+ * configuration (above) specifies DWT_PAC8, we get an ON time of 2x8 symbols, or around 16 ï¿½s.
+ * OFF time is expressed in multiples of 128/125 us (~1 us).
+ * These values will lead to a roughly 50% duty-cycle, each ON and OFF phase lasting for about 16 ï¿½s. */
 #define SNIFF_ON_TIME  2
 #define SNIFF_OFF_TIME 16
 
@@ -68,7 +66,7 @@ int rx_sniff(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -117,10 +115,10 @@ int rx_sniff(void)
             rx_buffer[i] = 0;
         }
 
-        /* Activate reception immediately. See NOTE 3 below. */
+        /* Activate reception immediately. See NOTE 2 below. */
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
 
-        /* Poll until a frame is properly received or an RX error occurs. See NOTE 4 below.
+        /* Poll until a frame is properly received or an RX error occurs. See NOTE 3 below.
          * STATUS register is 5 bytes long but we are not interested in the high byte here, so we read a more manageable 32-bits with this API call. */
         waitforsysstatus(&status_reg, NULL, (DWT_INT_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_ERR), 0);
 
@@ -130,7 +128,7 @@ int rx_sniff(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* A frame has been received, copy it to our local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= FRAME_LEN_MAX)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -149,12 +147,8 @@ int rx_sniff(void)
  *
  * 1. In this example, maximum frame length is set to 127 bytes which is 802.15.4 UWB standard maximum frame length. DW IC supports an extended
  *    frame length (up to 1023 bytes long) mode which is not used in this example.
- * 2. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *    thereafter.
- * 3. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
+ * 2. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
  *    optimise system's overall performance (e.g. timeout after a given time, automatic re-enabling of reception in case of errors, etc.).
- * 4. We use polled mode of operation here to keep the example as simple as possible but RXFCG and error/timeout status events can be used to generate
+ * 3. We use polled mode of operation here to keep the example as simple as possible but RXFCG and error/timeout status events can be used to generate
  *    interrupts. Please refer to DW IC User Manual for more details on "interrupts".
- * 5. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
  ****************************************************************************************************************************************************/
