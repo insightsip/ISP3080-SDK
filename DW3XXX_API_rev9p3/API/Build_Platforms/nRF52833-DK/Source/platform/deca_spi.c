@@ -205,8 +205,10 @@ int writetospiwithcrc(uint16_t headerLength, const uint8_t *headerBuffer, uint16
     spi_xfer_done = false;
     nrf_drv_spi_transfer(&pgSpiHandler->spi_inst, idatabuf, idatalength, itempbuf, idatalength);
 
-    closespi(&pgSpiHandler->spi_inst);
     nrfx_gpiote_out_toggle(current_cs_pin);
+
+    closespi(&pgSpiHandler->spi_inst);
+
 
     __HAL_UNLOCK(pgSpiHandler);
 #endif //DWT_ENABLE_CRC
@@ -246,8 +248,10 @@ int writetospi(uint16_t headerLength, const uint8_t *headerBuffer, uint16_t body
     spi_xfer_done = false;
     nrf_drv_spi_transfer(&pgSpiHandler->spi_inst, idatabuf, idatalength, itempbuf, idatalength);
 
-    closespi(&pgSpiHandler->spi_inst);
     nrfx_gpiote_out_toggle(current_cs_pin);
+
+    closespi(&pgSpiHandler->spi_inst);
+
      __HAL_UNLOCK(pgSpiHandler);
 
     return 0;
@@ -293,8 +297,9 @@ int readfromspi(uint16_t headerLength, uint8_t *headerBuffer, uint16_t readLengt
     p1 = itempbuf + headerLength;
     memcpy(readBuffer, p1, readLength);
 
-    closespi(&pgSpiHandler->spi_inst);
     nrfx_gpiote_out_toggle(current_cs_pin);
+
+    closespi(&pgSpiHandler->spi_inst);
 
     __HAL_UNLOCK(pgSpiHandler);
 
