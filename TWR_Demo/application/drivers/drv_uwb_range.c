@@ -147,6 +147,7 @@ static uint32_t uwb_wake_up(void) {
         nrf_delay_us(10);
         wake_up_cpt++;
         if (wake_up_cpt >= 200) {
+            NRF_LOG_ERROR("uwb_wake_up failed");
             return NRF_ERROR_INTERNAL;
         }
     };
