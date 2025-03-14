@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.0] 2025-03-14
+
+### Changed
+
+- Update version of uwb driver (now 08.02.02)
+
+### Fixed
+
+- Fix a wake up issue with qm33110
+
 ## [1.2.0] 2024-08-13
 
 ### Added
