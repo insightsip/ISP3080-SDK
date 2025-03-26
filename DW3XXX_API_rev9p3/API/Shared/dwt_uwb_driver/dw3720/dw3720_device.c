@@ -464,7 +464,7 @@ static void dwt_xfer3xxx(dwchip_t *dw,
     uint8_t crc8, dwcrc8;
     bool fatal_error_occurred = false;
 
-    bool length_is_correct = length < DWT_REG_DATA_MAX_LENGTH;
+    bool __attribute__((__unused__)) length_is_correct = length < DWT_REG_DATA_MAX_LENGTH;
     assert(length_is_correct);
 
     if ((mode == DW3000_SPI_WR_FAST_CMD) || (mode == DW3000_SPI_RD_FAST_CMD))
