@@ -9,13 +9,11 @@
  *           local time-stamps, (of poll RX, response TX and final RX), this example application works out a value for the time-of-flight over-the-air
  *           and, thus, the estimated distance between the two devices, which it writes to the LCD.
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <config_options.h>
@@ -99,7 +97,7 @@ static uint64_t final_rx_ts;
 static double tof;
 static double distance;
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
- * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
+ * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 7 below. */
 extern dwt_txconfig_t txconfig_options;
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -116,7 +114,7 @@ int ds_twr_responder(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -135,7 +133,7 @@ int ds_twr_responder(void)
         while (1) { };
     }
 
-    /* Configure DW IC. See NOTE 15 below. */
+    /* Configure DW IC. See NOTE 13 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -153,6 +151,7 @@ int ds_twr_responder(void)
     /* Next can enable TX/RX states output on GPIOs 5 and 6 to help debug, and also TX/RX LEDs
      * Note, in real low power applications the LEDs should not be used. */
     dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
+    // dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
     /* Loop forever responding to ranging requests. */
     while (1)
@@ -175,7 +174,7 @@ int ds_twr_responder(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= RX_BUF_LEN)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -226,7 +225,7 @@ int ds_twr_responder(void)
                     dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK | DWT_INT_TXFRS_BIT_MASK);
 
                     /* A frame has been received, read it into the local buffer. */
-                    frame_len = dwt_getframelength();
+                    frame_len = dwt_getframelength(0);
                     if (frame_len <= RX_BUF_LEN)
                     {
                         dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -376,10 +375,6 @@ int ds_twr_responder(void)
  * 12. The high order byte of each 40-bit time-stamps is discarded here. This is acceptable as, on each device, those time-stamps are not separated by
  *     more than 2**32 device time units (which is around 67 ms) which means that the calculation of the round-trip delays can be handled by a 32-bit
  *     subtraction.
- * 13. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
- * 14. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 36 MHz can be used
- *     thereafter.
- * 15. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ * 13. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *     configuration.
  ****************************************************************************************************************************************************/

@@ -7,19 +7,17 @@
  *           2. The address of the device sending the MAC command frame matches
  *           one of the four 16-bit addresses programmed into LE_PEND01 or
  *           LE_PEND23 registers and the data pending bits are set in FF_CFG
- *           register: LE0_PEND – LE3_PEND.
+ *           register: LE0_PEND - LE3_PEND.
  *           3.The address of the device sending the MAC command is 16-bits and SSADRAPE bit is set.
  *           4.The address of the device sending the MAC command is 64-bits and LSADRAPE bit is set.
  *           5.Security bit is not set in Frame Control and frame version is 0 or 1
  *           Ack frame can then be check if data pending bit has been set correctly.
  *
- * @attention
- *
- * Copyright 2020 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -98,7 +96,7 @@ int le_pend_tx(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -145,14 +143,14 @@ int le_pend_tx(void)
         /* Clear TXFRS event. */
         dwt_writesysstatuslo(DWT_INT_TXFRS_BIT_MASK);
 
-        /* We assume that the transmission is achieved correctly, poll for reception of a frame or error/timeout. See NOTE 8 below. */
+        /* We assume that the transmission is achieved correctly, poll for reception of a frame or error/timeout. See NOTE 7 below. */
         waitforsysstatus(&status_reg, NULL, (DWT_INT_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR), 0);
 
         if (status_reg & DWT_INT_RXFCG_BIT_MASK)
         {
             uint16_t frame_len;
             /* A frame has been received, check frame length is correct for ACK, then read and verify the ACK. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len == ACK_FRAME_LEN)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -185,7 +183,7 @@ int le_pend_tx(void)
  *    while loop, and then timing from the "GO" for a few minutes before breaking in again, and examining the frame counters.
  * 2. Source and destination addresses are hard coded constants to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the DW IC
- *    during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that customers
+ *    during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that customers
  *    buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 3. In this example, receive buffer is set to the exact size of the only frame we want to handle but 802.15.4z UWB standard maximum frame length is
  *    127 bytes. DW IC also supports an extended frame length (up to 1023 bytes long) mode which is not used in this example..

@@ -8,20 +8,18 @@
  *
  *           This example utilises the 802.15.4z STS to accomplish secure timestamps between the initiator and responder. A 32-bit STS counter
  *           is part of the STS IV used to generate the scrambled timestamp sequence (STS) in the transmitted packet and to cross correlate in the
- *           receiver. This count normally advances by 1 for every 1024 chips (~2µs) of STS in BPRF mode, and by 1 for every 512 chips (~1µs) of STS
+ *           receiver. This count normally advances by 1 for every 1024 chips (~2us) of STS in BPRF mode, and by 1 for every 512 chips (~1us) of STS
  *           in HPRF mode. If both devices (initiator and responder) have count values that are synced, then the communication between devices should
  *           result in secure timestamps which can be used to calculate distance. If not, then the devices need to re-sync their STS counter values.
  *           In this example, the initiator will send a plain-text value of it's 32-bit STS counter inside the "poll" frame. The receiver first
  *           checks the quality of the STS of the received frame. If the received frame has bad STS quality, it can then use the plain-text
  *           counter value received to adjust it's own STS counter value to match. This means that the next message in the sequence should be in sync again.
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -40,7 +38,7 @@
 extern void test_run_info(unsigned char *data);
 
 /* Example application name */
-#define APP_NAME "SS TWR INIT v1.0"
+#define APP_NAME "SS TWR INIT STS v1.0"
 
 /* Inter-ranging delay period, in milliseconds. */
 #define RNG_DELAY_MS 1000
@@ -83,6 +81,7 @@ static double distance;
 /* Hold the amount of errors that have occurred */
 static uint32_t errors[23] = { 0 };
 
+/* See NOTE 6 below. */
 extern dwt_config_t config_options;
 extern dwt_txconfig_t txconfig_options;
 extern dwt_txconfig_t txconfig_options_ch9;
@@ -151,7 +150,7 @@ int ss_twr_initiator_sts(void)
     /* Display application name on UART. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
 #ifdef CONFIG_SPI_FAST_RATE
     port_set_dw_ic_spi_fastrate();
 #endif /* CONFIG_SPI_FAST_RATE */
@@ -179,7 +178,7 @@ int ss_twr_initiator_sts(void)
      * Note, in real low power applications the LEDs should not be used. */
     dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
-    /* Configure DW IC. See NOTE 15 below. */
+    /* Configure DW IC. See NOTE 10 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config_options))
     {
@@ -213,7 +212,7 @@ int ss_twr_initiator_sts(void)
     {
         /*
          * Set STS encryption key and IV (nonce).
-         * See NOTE 16 below.
+         * See NOTE 12 below.
          */
         if (!firstLoopFlag)
         {
@@ -253,7 +252,7 @@ int ss_twr_initiator_sts(void)
         /*
          * Need to check the STS has been received and is good.
          */
-        goodSts = dwt_readstsquality(&stsQual);
+        goodSts = dwt_readstsquality(&stsQual, 0);
 
         /* Increment frame sequence number after transmission of the poll message (modulo 256). */
         frame_seq_nb++;
@@ -269,7 +268,7 @@ int ss_twr_initiator_sts(void)
             dwt_writesysstatuslo(SYS_STATUS_ALL_RX_GOOD);
 
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= sizeof(rx_buffer))
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -285,7 +284,7 @@ int ss_twr_initiator_sts(void)
 
                     /* Retrieve poll transmission and response reception timestamps. See NOTE 9 below. */
                     poll_tx_ts = dwt_readtxtimestamplo32();
-                    resp_rx_ts = dwt_readrxtimestamplo32();
+                    resp_rx_ts = dwt_readrxtimestamplo32(0);
 
                     /* Read carrier integrator value and calculate clock offset ratio. See NOTE 11 below. */
                     clockOffsetRatio = ((float)dwt_readclockoffset()) / (uint32_t)(1 << 26);
@@ -387,7 +386,7 @@ int ss_twr_initiator_sts(void)
  *    after an exchange of specific messages used to define those short addresses for each device participating to the ranging exchange.
  * 5. This timeout is for complete reception of a frame, i.e. timeout duration must take into account the length of the expected frame. Here the value
  *    is arbitrary but chosen large enough to make sure that there is enough time to receive the complete response frame sent by the responder at the
- *    6.8M data rate used (around 700 µs).
+ *    6.8M data rate used (around 700 us).
  * 6. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
  * 7. dwt_writetxdata() takes the full size of the message as a parameter but only copies (size - 2) bytes as the check-sum at the end of the frame is
@@ -400,13 +399,15 @@ int ss_twr_initiator_sts(void)
  * 9. The high order byte of each 40-bit time-stamps is discarded here. This is acceptable as, on each device, those time-stamps are not separated by
  *    more than 2**32 device time units (which is around 67 ms) which means that the calculation of the round-trip delays can be handled by a 32-bit
  *    subtraction.
- * 10. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
+ * 10. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *     configuration.
  * 11. The use of the clock offset value to correct the TOF calculation, significantly improves the result of the SS-TWR where the remote
  *     responder unit's clock is a number of PPM offset from the local initiator unit's clock.
  *     As stated in NOTE 2 a fixed offset in range will be seen unless the antenna delay is calibrated and set correctly.
- * 12. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *     thereafter.
+ * 12. This example will set the STS key and IV upon each iteration of the main while loop. While this has the benefit of keeping the STS count in
+ *     sync with the responder device (which does the same), it should be noted that this is not a 'secure' implementation as the count is reset upon
+ *     each iteration of the loop. An attacker could potentially recognise this pattern if the signal was being monitored. While it serves it's
+ *     purpose in this simple example, it should not be utilised in any final solution.
  * 13. This example uses the 802.15.4z STS with a packet configuration of mode 1 which looks like so:
  *     ---------------------------------------------------
  *     | Ipatov Preamble | SFD | STS | PHR | PHY Payload |
@@ -432,10 +433,4 @@ int ss_twr_initiator_sts(void)
  *                                   ^|R RMARKER|    - time of Resp TX/RX
  *                    <--------->                    - POLL_TX_TO_RESP_RX_DLY_UUS - Preamble Length
  *                    <-------------->               - POLL_RX_TO_RESP_TX_DLY_UUS (depends on how quickly responder can turn around and reply)
- * 15. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
- *     configuration.
- * 16. This example will set the STS key and IV upon each iteration of the main while loop. While this has the benefit of keeping the STS count in
- *     sync with the responder device (which does the same), it should be noted that this is not a 'secure' implementation as the count is reset upon
- *     each iteration of the loop. An attacker could potentially recognise this pattern if the signal was being monitored. While it serves it's
- *     purpose in this simple example, it should not be utilised in any final solution.
  ****************************************************************************************************************************************************/

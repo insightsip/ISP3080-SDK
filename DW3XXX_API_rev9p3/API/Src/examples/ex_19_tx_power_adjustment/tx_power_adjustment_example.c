@@ -89,14 +89,14 @@ void tx_power_adjustment_example(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3700 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
     /* Target specific drive of RSTn line into DW IC low for a period. */
     reset_DWIC();
 
-    /* Time needed for DW3000 to start up
+    /* Time needed for DW3700 to start up
      * (transition from INIT_RC to IDLE_RC) */
     Sleep(2);
 

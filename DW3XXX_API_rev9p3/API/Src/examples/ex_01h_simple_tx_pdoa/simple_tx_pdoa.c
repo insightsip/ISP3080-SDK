@@ -3,13 +3,11 @@
  *  @brief   Simple TX PDOA example code, companion to Simple RX PDOA example.
  *           See note 7 regarding information on calibrating the system
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -27,7 +25,7 @@ extern void test_run_info(unsigned char *data);
 /* Example application name */
 #define APP_NAME "SIMPLE TX v1.0"
 
-/* Default communication configuration. We use default non-STS DW mode. See note 6 below*/
+/* Default communication configuration. We use STS with SDC DW mode. See note 6 below*/
 static dwt_config_t config = {
     5,               /* Channel number. */
     DWT_PLEN_128,    /* Preamble length. Used in TX only. */
@@ -70,7 +68,7 @@ int simple_tx_pdoa(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -139,7 +137,7 @@ int simple_tx_pdoa(void)
  *
  * 1. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
+ *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that
  *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
  * 2. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.

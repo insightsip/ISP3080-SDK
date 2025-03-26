@@ -45,7 +45,7 @@
 #define SERVICE_UWB_RANGE 0
 #define SERVICE_BATT_MEAS 1
 #define BATTERY_MEAS_INTERVAL_MS 10000
-#define FW_REVISION "1.2.0"             /**< Version. */
+#define FW_REVISION "1.3.0"             /**< Version. */
 #define MANUFACTURER_NAME "Insight SiP" /**< Manufacturer. */
 #if defined(BOARD_ISP3080_UX_TG)
 #define DEVICE_NAME "ISP3080-UX-TG" /**< Name of device. Will be included in the advertising data. */

@@ -6,13 +6,11 @@
  *           example "TX then wait for response example code"). When a frame is received and validated as the expected frame a response message is
  *           sent, after which the code returns to await reception of another frame.
  *
- * @attention
- *
- * Copyright 2015 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -72,7 +70,7 @@ static uint8_t rx_buffer[FRAME_LEN_MAX];
 #define BLINK_FRAME_SRC_IDX 2
 
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
- * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
+ * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 3 below. */
 extern dwt_txconfig_t txconfig_options;
 
 /**
@@ -88,7 +86,7 @@ int rx_send_resp(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -110,7 +108,7 @@ int rx_send_resp(void)
     /* Enabling LEDs here for debug so that for each TX the D1 LED will flash on DW3000 red eval-shield boards. */
     dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
-    /* Configure DW IC. See NOTE 8 below. */
+    /* Configure DW IC. See NOTE 2 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -135,7 +133,7 @@ int rx_send_resp(void)
         if (status_reg & DWT_INT_RXFCG_BIT_MASK)
         {
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= FRAME_LEN_MAX)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -187,8 +185,8 @@ int rx_send_resp(void)
  *
  * 1. In this example, maximum frame length is set to 127 bytes which is 802.15.4 UWB standard maximum frame length. DW IC supports an extended frame
  *    length (up to 1023 bytes long) mode which is not used in this example.
- * 2. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *    thereafter.
+ * 2. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *    configuration.
  * 3. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
  * 4. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
@@ -198,8 +196,4 @@ int rx_send_resp(void)
  * 6. dwt_writetxdata() takes the full size of tx_msg as a parameter but only copies (size - 2) bytes as the check-sum at the end of the frame is
  *    automatically appended by the DW IC. This means that our tx_msg could be two bytes shorter without losing any data (but the sizeof would not
  *    work anymore then as we would still have to indicate the full length of the frame to dwt_writetxdata()).
- * 7. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
- * 8. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
- *    configuration.
  ****************************************************************************************************************************************************/

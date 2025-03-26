@@ -12,13 +12,11 @@
  *           Note: As STS is used, the receptions are considered valid if and only if the STS quality index is good. Then the STS timestamp
  *           is read and used for the TWR range calculation. Please see note below on Super Deterministic Code (SDC).
  *
- * @attention
- *
- * Copyright 2017 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -87,7 +85,7 @@ static uint32_t status_reg = 0;
 #define POLL_TX_TO_RESP_RX_DLY_UUS (290 + CPU_PROCESSING_TIME)
 
 /* This is the delay from Frame RX timestamp to TX reply timestamp used for calculating/setting the DW IC's delayed TX function.
- * This value is required to be larger than POLL_TX_TO_RESP_RX_DLY_UUS. Please see NOTE 16 for more details. */
+ * This value is required to be larger than POLL_TX_TO_RESP_RX_DLY_UUS. Please see NOTE 14 for more details. */
 #define RESP_RX_TO_FINAL_TX_DLY_UUS (480 + CPU_PROCESSING_TIME)
 /* Receive response timeout. See NOTE 5 below. */
 #define RESP_RX_TIMEOUT_UUS 300
@@ -100,7 +98,7 @@ static uint64_t resp_rx_ts;
 static uint64_t final_tx_ts;
 
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
- * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
+ * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 7 below. */
 extern dwt_txconfig_t txconfig_options;
 
 /*! ------------------------------------------------------------------------------------------------------------------
@@ -117,7 +115,7 @@ int ds_twr_sts_sdc_initiator(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -136,7 +134,7 @@ int ds_twr_sts_sdc_initiator(void)
         while (1) { };
     }
 
-    /* Configure DW IC. See NOTE 15 below. */
+    /* Configure DW IC. See NOTE 13 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -144,7 +142,7 @@ int ds_twr_sts_sdc_initiator(void)
         while (1) { };
     }
 
-    /* Configure the TX spectrum parameters (power, PG delay and PG count) */
+    /* Configure the TX spectrum parameters (power, PG delay and PG count). */
     dwt_configuretxrf(&txconfig_options);
 
     /* Apply default antenna delay value. See NOTE 1 below. */
@@ -192,10 +190,10 @@ int ds_twr_sts_sdc_initiator(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK | DWT_INT_TXFRS_BIT_MASK);
 
             // As STS is used, we only consider frames that are received with good STS quality
-            if (((goodSts = dwt_readstsquality(&stsQual)) >= 0) && (dwt_readstsstatus(&stsStatus, 0) == DWT_SUCCESS)) // if STS is good this will be true >= 0
+            if (((goodSts = dwt_readstsquality(&stsQual, 0)) >= 0) && (dwt_readstsstatus(&stsStatus, 0) == DWT_SUCCESS)) // if STS is good this will be true >= 0
             {
                 /* A frame has been received, read it into the local buffer. */
-                frame_len = dwt_getframelength();
+                frame_len = dwt_getframelength(0);
                 if (frame_len <= RX_BUF_LEN)
                 {
                     dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -337,13 +335,9 @@ int ds_twr_sts_sdc_initiator(void)
  *     ranging exchange to try another one after 1 second. If this error handling code was not here, a late dwt_starttx() would result in the code
  *     flow getting stuck waiting for a TX frame sent event that will never come. The companion "responder" example (ex_05b) should timeout from
  *     awaiting the "final" and proceed to have its receiver on ready to poll of the following exchange.
- * 13. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW3000 API Guide for more details on the DW3000 driver functions.
- * 14. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 36 MHz can be used
- *     thereafter.
- * 15. Desired configuration by user may be different to the current programmed configuratio.n dwt_configure is called to set desired
+ * 13. Desired configuration by user may be different to the current programmed configuratio.n dwt_configure is called to set desired
  *     configuration.
- * 16. The receiver is enabled with reference to the timestamp of the previously received signal.
+ * 14. The receiver is enabled with reference to the timestamp of the previously received signal.
  *     The receiver will start after a defined delay.
  *     This defined delay is currently the same as the delay between the responder's received
  *     timestamp of it's last received frame and the timestamp of the transmitted signal that is

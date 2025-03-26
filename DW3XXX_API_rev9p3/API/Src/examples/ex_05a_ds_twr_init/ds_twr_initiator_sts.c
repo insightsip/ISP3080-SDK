@@ -8,20 +8,18 @@
  *
  *           This example utilises the 802.15.4z STS to accomplish secure timestamps between the initiator and responder. A 32-bit STS counter
  *           is part of the STS IV used to generate the scrambled timestamp sequence (STS) in the transmitted packet and to cross correlate in the
- *           receiver. This count normally advances by 1 for every 1024 chips (~2µs) of STS in BPRF mode, and by 1 for every 512 chips (~1µs) of STS
+ *           receiver. This count normally advances by 1 for every 1024 chips (~2ï¿½s) of STS in BPRF mode, and by 1 for every 512 chips (~1ï¿½s) of STS
  *           in HPRF mode. If both devices (initiator and responder) have count values that are synced, then the communication between devices should
  *           result in secure timestamps which can be used to calculate distance. If not, then the devices need to re-sync their STS counter values.
  *           In this example, the initiator will send a plain-text value of it's 32-bit STS counter inside the "poll" frame. The receiver first
  *           checks the quality of the STS of the received frame. If the received frame has bad STS quality, it can then use the plain-text
  *           counter value received to adjust it's own STS counter value to match. This means that the next message in the sequence should be in sync again.
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -157,7 +155,7 @@ int ds_twr_initiator_sts(void)
     /* Display application name on UART. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
 #ifdef CONFIG_SPI_FAST_RATE
     port_set_dw_ic_spi_fastrate();
 #endif /* CONFIG_SPI_FAST_RATE */
@@ -193,7 +191,7 @@ int ds_twr_initiator_sts(void)
         while (1) { };
     }
 
-    /* Configure the TX spectrum parameters (power, PG delay and PG count) */
+    /* Configure the TX spectrum parameters (power, PG delay and PG count). See NOTE 6 below. */
     if (config_options.chan == 5)
     {
         dwt_configuretxrf(&txconfig_options);
@@ -207,7 +205,7 @@ int ds_twr_initiator_sts(void)
     dwt_setrxantennadelay(RX_ANT_DLY);
     dwt_settxantennadelay(TX_ANT_DLY);
 
-    /* Set expected response's delay and timeout. See NOTE 14, 17 and 5 below.
+    /* Set expected response's delay and timeout. See NOTE 14, 12 and 5 below.
      * As this example only handles one incoming frame with always the same delay and timeout, those values can be set here once for all. */
     dwt_setrxaftertxdelay(POLL_TX_TO_RESP_RX_DLY_UUS);
     dwt_setrxtimeout(RESP_RX_TIMEOUT_UUS);
@@ -256,7 +254,7 @@ int ds_twr_initiator_sts(void)
         /*
          * Need to check the STS has been received and is good.
          */
-        goodSts = dwt_readstsquality(&stsQual);
+        goodSts = dwt_readstsquality(&stsQual, 0);
 
         /* Increment frame sequence number after transmission of the poll message (modulo 256). */
         frame_seq_nb++;
@@ -272,7 +270,7 @@ int ds_twr_initiator_sts(void)
             dwt_writesysstatuslo(SYS_STATUS_ALL_RX_GOOD);
 
             /* A frame has been received, read it into the local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= sizeof(rx_buffer))
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -290,13 +288,13 @@ int ds_twr_initiator_sts(void)
                     poll_tx_ts = get_tx_timestamp_u64();
                     resp_rx_ts = get_rx_timestamp_u64();
 
-                    /* Compute final message transmission time. See NOTE 19 below. */
+                    /* Compute final message transmission time. See NOTE 10 below. */
                     final_tx_time = (resp_rx_ts + (RESP_RX_TO_FINAL_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
                     dwt_setdelayedtrxtime(final_tx_time);
 
                     final_tx_ts = (((uint64_t)(final_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
 
-                    /* Write all timestamps in the final message. See NOTE 19 below. */
+                    /* Write all timestamps in the final message. See NOTE 10 below. */
                     final_msg_set_ts(&tx_final_msg[FINAL_MSG_POLL_TX_TS_IDX], poll_tx_ts);
                     final_msg_set_ts(&tx_final_msg[FINAL_MSG_RESP_RX_TS_IDX], resp_rx_ts);
                     final_msg_set_ts(&tx_final_msg[FINAL_MSG_FINAL_TX_TS_IDX], final_tx_ts);
@@ -363,7 +361,7 @@ int ds_twr_initiator_sts(void)
  *    sensitive to the clock offset error between the devices and the length of the response delay between frames. To achieve the best possible
  *    accuracy, this response delay must be kept as low as possible. In order to do so, 6.8 Mbps data rate is used in this example and the response
  *    delay between frames is defined as low as possible. The user is referred to User Manual for more details about the double-sided two-way ranging
- *    process.  NB:SEE ALSO NOTE 14.
+ *    process.  NB:SEE ALSO NOTE 11.
  * 2. The sum of the values is the TX to RX antenna delay, this should be experimentally determined by a calibration process. Here we use a hard coded
  *    value (expected to be a little low so a positive error will be seen on the resultant distance estimate). For a real production application, each
  *    device should have its own antenna delay properly calibrated to get good precision when performing range measurements.
@@ -391,7 +389,7 @@ int ds_twr_initiator_sts(void)
  *    after an exchange of specific messages used to define those short addresses for each device participating to the ranging exchange.
  * 5. This timeout is for complete reception of a frame, i.e. timeout duration must take into account the length of the expected frame. Here the value
  *    is arbitrary but chosen large enough to make sure that there is enough time to receive the complete response frame sent by the responder at the
- *    6.8M data rate used (around 300 µs).
+ *    6.8M data rate used (around 300 us).
  * 6. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
  * 7. dwt_writetxdata() takes the full size of the message as a parameter but only copies (size - 2) bytes as the check-sum at the end of the frame is
@@ -404,13 +402,24 @@ int ds_twr_initiator_sts(void)
  * 9. The high order byte of each 40-bit time-stamps is discarded here. This is acceptable as, on each device, those time-stamps are not separated by
  *    more than 2**32 device time units (which is around 67 ms) which means that the calculation of the round-trip delays can be handled by a 32-bit
  *    subtraction.
- * 10. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
+ * 10. As we want to send final TX timestamp in the final message, we have to compute it in advance instead of relying on the reading of DW IC
+ *     register. Timestamps and delayed transmission time are both expressed in device time units so we just have to add the desired response delay to
+ *     response RX timestamp to get final transmission time. The delayed transmission time resolution is 512 device time units which means that the
+ *     lower 9 bits of the obtained value must be zeroed. This also allows to encode the 40-bit value in a 32-bit words by shifting the all-zero lower
+ *     8 bits.
  * 11. The use of the clock offset value to correct the TOF calculation, significantly improves the result of the SS-TWR where the remote
  *     responder unit's clock is a number of PPM offset from the local initiator unit's clock.
  *     As stated in NOTE 2 a fixed offset in range will be seen unless the antenna delay is calibrated and set correctly.
- * 12. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *     thereafter.
+ * 12. Delays between frames have been chosen here to ensure proper synchronisation of transmission and reception of the frames between the initiator
+ *     and the responder and to ensure a correct accuracy of the computed distance. The user is referred to DecaRanging ARM Source Code Guide for more
+ *     details about the timings involved in the ranging process.
+ *
+ *  EXAMPLE 1: with SPI rate set to 18 MHz (default on this platform), and frame lengths of ~190 us, the delays can be set to:
+ *             POLL_RX_TO_RESP_TX_DLY_UUS of 400uus, and RESP_RX_TO_FINAL_TX_DLY_UUS of 400uus (TXtoRX delays are set to 210uus)
+ *             reducing the delays further can be achieved by using interrupt to handle the TX/RX events, or other code optimisations/faster SPI
+ *
+ *  EXAMPLE 2: with SPI rate set to 4.5 MHz, and frame lengths of ~190 us, the delays can be set to:
+ *             POLL_RX_TO_RESP_TX_DLY_UUS of 550uus, and RESP_RX_TO_FINAL_TX_DLY_UUS of 600uus (TXtoRX delays are set to 360 and 410 uus respectively)
  * 13. This example uses the 802.15.4z STS with a packet configuration of mode 1 which looks like so:
  *     ---------------------------------------------------
  *     | Ipatov Preamble | SFD | STS | PHR | PHY Payload |
@@ -452,20 +461,4 @@ int ds_twr_initiator_sts(void)
  *     sync with the responder device (which does the same), it should be noted that this is not a 'secure' implementation as the count is reset upon
  *     each iteration of the loop. An attacker could potentially recognise this pattern if the signal was being monitored. While it serves it's
  *     purpose in this simple example, it should not be utilised in any final solution.
- * 17. Delays between frames have been chosen here to ensure proper synchronisation of transmission and reception of the frames between the initiator
- *     and the responder and to ensure a correct accuracy of the computed distance. The user is referred to DecaRanging ARM Source Code Guide for more
- *     details about the timings involved in the ranging process.
- *
- *  EXAMPLE 1: with SPI rate set to 18 MHz (default on this platform), and frame lengths of ~190 us, the delays can be set to:
- *             POLL_RX_TO_RESP_TX_DLY_UUS of 400uus, and RESP_RX_TO_FINAL_TX_DLY_UUS of 400uus (TXtoRX delays are set to 210uus)
- *             reducing the delays further can be achieved by using interrupt to handle the TX/RX events, or other code optimisations/faster SPI
- *
- *  EXAMPLE 2: with SPI rate set to 4.5 MHz, and frame lengths of ~190 us, the delays can be set to:
- *             POLL_RX_TO_RESP_TX_DLY_UUS of 550uus, and RESP_RX_TO_FINAL_TX_DLY_UUS of 600uus (TXtoRX delays are set to 360 and 410 uus respectively)
- *
- * 19. As we want to send final TX timestamp in the final message, we have to compute it in advance instead of relying on the reading of DW IC
- *     register. Timestamps and delayed transmission time are both expressed in device time units so we just have to add the desired response delay to
- *     response RX timestamp to get final transmission time. The delayed transmission time resolution is 512 device time units which means that the
- *     lower 9 bits of the obtained value must be zeroed. This also allows to encode the 40-bit value in a 32-bit words by shifting the all-zero lower
- *     8 bits.
  ****************************************************************************************************************************************************/

@@ -6,17 +6,16 @@
  *           2. The address of the device sending the MAC command frame matches
  *           one of the four 16-bit addresses programmed into LE_PEND01 or
  *           LE_PEND23 registers and the data pending bits are set in FF_CFG
- *           register: LE0_PEND – LE3_PEND.
+ *           register: LE0_PEND - LE3_PEND.
  *           3.The address of the device sending the MAC command is 16-bits and SSADRAPE bit is set.
  *           4.The address of the device sending the MAC command is 64-bits and LSADRAPE bit is set.
  *           5.Security bit is not set in Frame Control and frame version is 0 or 1.
- * @attention
- *
- * Copyright 2020 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
  *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -69,7 +68,7 @@ int le_pend_rx(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* SPI rate, DW IC supports up to 36 MHz */
+    /* SPI rate, DW IC supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -91,7 +90,7 @@ int le_pend_rx(void)
     /* Enabling LEDs here for debug so that for each RX-enable the D2 LED will flash on DW3000 red eval-shield boards. */
     dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
-    /* Configure DW IC. */
+    /* Configure DW IC. See NOTE 3 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -128,7 +127,7 @@ int le_pend_rx(void)
         if (status_reg & DWT_INT_RXFCG_BIT_MASK)
         {
             /* A frame has been received, copy it to our local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= FRAME_LEN_MAX)
             {
                 dwt_readrxdata(rx_buffer, frame_len - FCS_LEN, 0); /* No need to read the FCS/CRC. */
@@ -156,21 +155,14 @@ int le_pend_rx(void)
  *
  * 1. PAN ID and short address are hard coded constants to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the DW IC
- *    during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that customers
+ *    during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that customers
  *    buy a block of addresses from the IEEE Registration Authority for their production items.
  * 2. In this example, maximum frame length is set to 127 bytes which is 802.15.4z UWB standard maximum frame length. DW IC supports an extended frame
  *    length (up to 1023 bytes long) mode which is not used in this example.
- * 3. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
- *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
+ * 3. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *    configuration.
  * 4. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
  *    optimise system's overall performance (e.g. timeout after a given time, automatic re-enabling of reception in case of errors, etc.).
  * 5. We use polled mode of operation here to keep the example as simple as possible but all status events can be used to generate interrupts. Please
  *    refer to DW IC User Manual for more details on "interrupts".
- * 6. This is the purpose of the AAT bit in DW IC's STATUS register but because of an issue with the operation of AAT, it is simpler to directly
- *    check in the frame control if the ACK request bit is set. Please refer to DW IC User Manual for more details on Auto ACK feature and the AAT
- *    bit.
- * 7. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
- * 8. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
- *    configuration.
  ****************************************************************************************************************************************************/

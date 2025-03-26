@@ -11,13 +11,11 @@
  *           including the calculated/predicted TX time-stamp for the response message itself. The companion "SS TWR initiator" example application
  *           works out the time-of-flight over-the-air and, thus, the estimated distance between the two devices.
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -39,7 +37,7 @@ dwt_mic_size_e dwt_mic_size_from_bytes(uint8_t mic_size_in_bytes);
 /* This SS-TWR example will use sample MAC data frame format as defined by mac_frame_802_15_4_format_t structure */
 mac_frame_802_15_4_format_t mac_frame;
 
-static dwt_aes_config_t aes_config = { .key_load = AES_KEY_Load, // load the key into the AES engine see Note 14 below
+static dwt_aes_config_t aes_config = { .key_load = AES_KEY_Load, // load the key into the AES engine see Note 9 below
     .key_size = AES_KEY_128bit,                                  // use 128bit key
     .key_src = AES_KEY_Src_Register,                             // the key source is IC registers
     .aes_core_type = AES_core_type_CCM,                          // Use CCM core
@@ -126,7 +124,7 @@ int ss_aes_twr_responder(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset and initialize DW chip. */
@@ -148,7 +146,7 @@ int ss_aes_twr_responder(void)
      * Note, in real low power applications the LEDs should not be used. */
     dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
-    /* Configure DW IC. See NOTE 13 below. */
+    /* Configure DW IC. See NOTE 11 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -202,7 +200,7 @@ int ss_aes_twr_responder(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* Read data length that was received */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
 
             /* A frame has been received: firstly need to read the MHR and check this frame is what we expect:
              * the destination address should match our source address (frame filtering can be configured for this check,
@@ -274,7 +272,7 @@ int ss_aes_twr_responder(void)
                 aes_job_tx.nonce = nonce; /* set below once MHR is set*/
                 aes_config.mode = AES_Encrypt;
                 aes_config.mic = dwt_mic_size_from_bytes(aes_job_tx.mic_size);
-                dwt_configure_aes(&aes_config);
+                dwt_configure_aes((dwt_aes_config_t *)&aes_config);
 
                 /* Update the MHR (reusing the received MHR, thus need to swap SRC/DEST addresses */
                 mac_frame_set_pan_ids_and_addresses_802_15_4(&mac_frame, DEST_PAN_ID, DEST_ADDR, SRC_ADDR);
@@ -376,20 +374,13 @@ int ss_aes_twr_responder(void)
  * 8. In this operation, the high order byte of each 40-bit timestamps is discarded. This is acceptable as those time-stamps are not separated by
  *    more than 2**32 device time units (which is around 67 ms) which means that the calculation of the round-trip delays (needed in the
  *    time-of-flight computation) can be handled by a 32-bit subtraction.
- * 9. dwt_writetxdata() takes the full size of the message as a parameter but only copies (size - 2) bytes as the check-sum at the end of the frame is
- *    automatically appended by the DW IC. This means that our variable could be two bytes shorter without losing any data (but the sizeof would not
- *    work anymore then as we would still have to indicate the full length of the frame to dwt_writetxdata()).
+ * 9. When CCM core type is used, AES_KEY_Load needs to be set prior to each encryption/decryption operation, even if the AES KEY used has not changed.
  * 10. When running this example on the EVB1000 platform with the POLL_RX_TO_RESP_TX_DLY response delay provided, the dwt_starttx() is always
  *     successful. However, in cases where the delay is too short (or something else interrupts the code flow), then the dwt_starttx() might be issued
  *     too late for the configured start time. The code below provides an example of how to handle this condition: In this case it abandons the
  *     ranging exchange and simply goes back to awaiting another poll message. If this error handling code was not here, a late dwt_starttx() would
  *     result in the code flow getting stuck waiting subsequent RX event that will will never come. The companion "initiator" example (ex_06a) should
  *     timeout from awaiting the "response" and proceed to send another poll in due course to initiate another ranging exchange.
- * 11. The user is referred to DecaRanging ARM application (distributed with DW3000 product) for additional practical example of usage, and to the
- *     DW IC API Guide for more details on the DW IC driver functions.
- * 12. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *     thereafter.
- * 13. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ * 11. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *     configuration.
- * 14. When CCM core type is used, AES_KEY_Load needs to be set prior to each encryption/decryption operation, even if the AES KEY used has not changed.
  ****************************************************************************************************************************************************/

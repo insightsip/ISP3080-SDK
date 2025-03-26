@@ -9,13 +9,11 @@
  *           It also reads event counters (e.g. CRC good, CRC error, PHY header error, etc.) after any event, be it a good frame or an RX error. See
  *           dwt_deviceentcnts_t structure for more details on the counters read.
  *
- * @attention
- *
- * Copyright 2016 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -77,7 +75,7 @@ int rx_diagnostics(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -133,10 +131,10 @@ int rx_diagnostics(void)
 
         memset(&rx_diag, 0, sizeof(rx_diag));
 
-        /* Activate reception immediately. See NOTE 4 below. */
+        /* Activate reception immediately. See NOTE 3 below. */
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
 
-        /* Poll until a frame is properly received or an error/timeout occurs. See NOTE 5 below.
+        /* Poll until a frame is properly received or an error/timeout occurs. See NOTE 4 below.
          * STATUS register is 5 bytes long but, as the event we are looking at is in the first byte of the register, we can use this simplest API
          * function to access it. */
         waitforsysstatus(&status_reg, NULL, (DWT_INT_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_ERR), 0);
@@ -147,7 +145,7 @@ int rx_diagnostics(void)
             dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK);
 
             /* A frame has been received, copy it to our local buffer. */
-            frame_len = dwt_getframelength();
+            frame_len = dwt_getframelength(0);
             if (frame_len <= FRAME_LEN_MAX)
             {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
@@ -166,7 +164,7 @@ int rx_diagnostics(void)
             dwt_writesysstatuslo(SYS_STATUS_ALL_RX_ERR);
         }
 
-        /* Read event counters. See NOTE 7. */
+        /* Read event counters. See NOTE 6. */
         dwt_readeventcounters(&event_cnt);
     }
 }
@@ -179,18 +177,14 @@ int rx_diagnostics(void)
  * 2. Accumulator values are complex numbers: one 24-bit integer for real part and one 24-bit value for imaginary part, for each sample. In this
  *    example, we chose to read 3 values below the first path index and 3 values above. It must be noted that the first byte read when accessing the
  *    accumulator memory is always garbage and must be discarded, that is why the data length to read is increased by one byte here.
- * 3. In this example, the DW IC is put into IDLE state after calling dwt_initialise(). This means that a fast SPI rate of up to 20 MHz can be used
- *    thereafter.
- * 4. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
+ * 3. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
  *    optimise system's overall performance (e.g. timeout after a given time, automatic re-enabling of reception in case of errors, etc.).
- * 5. We use polled mode of operation here to keep the example as simple as possible, but RXFCG and error/timeout status events can be used to generate
+ * 4. We use polled mode of operation here to keep the example as simple as possible, but RXFCG and error/timeout status events can be used to generate
  *    interrupts. Please refer to DW IC User Manual for more details on "interrupts".
- * 6. Here we chose to read only a few values around the first path index but it is possible and can be useful to get all accumulator values, using
+ * 5. Here we chose to read only a few values around the first path index but it is possible and can be useful to get all accumulator values, using
  *    the relevant offset and length parameters. Reading the whole accumulator will require 4064 bytes of memory. First path value gotten from
  *    dwt_readdiagnostics is a 10.6 bits fixed point value calculated by the DW IC. By dividing this value by 64, we end up with the integer part of
  *    it. This value can be used to access the accumulator samples around the calculated first path index as it is done here.
- * 7. Event counters are never reset in this example but this can be done by re-enabling them (i.e. calling again dwt_configeventcounters with
+ * 6. Event counters are never reset in this example but this can be done by re-enabling them (i.e. calling again dwt_configeventcounters with
  *    "enable" parameter set).
- * 8. The user is referred to DecaRanging ARM application (distributed with EVK1000 product) for additional practical example of usage, and to the
- *    DW IC API Guide for more details on the DW IC driver functions.
  ****************************************************************************************************************************************************/

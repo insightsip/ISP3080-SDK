@@ -20,7 +20,7 @@
       build_treat_warnings_as_errors="No"
       c_additional_options=""
       c_preprocessor_definitions="BOARD_ISP3080_UX_TB;CONFIG_GPIO_AS_PINRESET;FLOAT_ABI_HARD;INITIALIZE_USER_SECTIONS;NO_VTOR_CONFIG;NRF52833_XXAA;DEBUG"
-      c_user_include_directories="$(ProjectDir)/Source/config;$(ProjectDir)/Source/platform;$(NordicSDKDir)/components/drivers_nrf/nrf_soc_nosd;$(NordicSDKDir)/components/boards;$(NordicSDKDir)/components/toolchain/cmsis/include;$(NordicSDKDir)/components/libraries/balloc;$(NordicSDKDir)/components/libraries/ringbuf;$(NordicSDKDir)/components/libraries/log;$(NordicSDKDir)/components/libraries/log/src;$(NordicSDKDir)/components/libraries/memobj;$(NordicSDKDir)/components/libraries/util;$(NordicSDKDir)/components/libraries/atomic;$(NordicSDKDir)/components/libraries/delay;$(NordicSDKDir)/components/libraries/experimental_section_vars;$(NordicSDKDir)/components/libraries/strerror;$(NordicSDKDir)/modules/nrfx;$(NordicSDKDir)/modules/nrfx/hal;$(NordicSDKDir)/modules/nrfx/mdk;$(NordicSDKDir)/modules/nrfx/drivers/include;$(NordicSDKDir)/integration/nrfx;$(NordicSDKDir)/integration/nrfx/legacy;$(NordicSDKDir)/external/fprintf;$(DW3000APIDir)/Src;$(DW3000APIDir)/Src/examples/examples_info;$(DW3000APIDir)/Src/examples/shared_data;$(DW3000APIDir)/Src/MAC_802_15_4;$(DW3000APIDir)/Src/MAC_802_15_8;$(DW3000APIDir)/Shared/dwt_uwb_driver/Inc"
+      c_user_include_directories="$(ProjectDir)/Source/config;$(ProjectDir)/Source/platform;$(NordicSDKDir)/components/drivers_nrf/nrf_soc_nosd;$(NordicSDKDir)/components/boards;$(NordicSDKDir)/components/toolchain/cmsis/include;$(NordicSDKDir)/components/libraries/balloc;$(NordicSDKDir)/components/libraries/ringbuf;$(NordicSDKDir)/components/libraries/log;$(NordicSDKDir)/components/libraries/log/src;$(NordicSDKDir)/components/libraries/memobj;$(NordicSDKDir)/components/libraries/util;$(NordicSDKDir)/components/libraries/atomic;$(NordicSDKDir)/components/libraries/delay;$(NordicSDKDir)/components/libraries/experimental_section_vars;$(NordicSDKDir)/components/libraries/strerror;$(NordicSDKDir)/modules/nrfx;$(NordicSDKDir)/modules/nrfx/hal;$(NordicSDKDir)/modules/nrfx/mdk;$(NordicSDKDir)/modules/nrfx/drivers/include;$(NordicSDKDir)/integration/nrfx;$(NordicSDKDir)/integration/nrfx/legacy;$(NordicSDKDir)/external/fprintf;$(DW3000APIDir)/Src;$(DW3000APIDir)/Src/examples/examples_info;$(DW3000APIDir)/Src/examples/shared_data;$(DW3000APIDir)/Src/MAC_802_15_4;$(DW3000APIDir)/Src/MAC_802_15_8;$(DW3000APIDir)/Shared/dwt_uwb_driver;$(DW3000APIDir)/Shared/dwt_uwb_driver/dw3000;$(DW3000APIDir)/Shared/dwt_uwb_driver/dw3720;$(DW3000APIDir)/Shared/dwt_uwb_driver/lib/qmath/include;$(DW3000APIDir)/Shared/dwt_uwb_driver/lib/qmath/src"
       debug_register_definition_file="$(NordicSDKDir)/modules/nrfx/mdk/nrf52833.svd"
       debug_target_connection="J-Link"
       gcc_all_warnings_command_line_options=""
@@ -31,7 +31,7 @@
       gcc_entry_point="Reset_Handler"
       gcc_optimization_level="Level 0"
       link_linker_script_file="Setup/SEGGER_Flash.icf"
-      linker_additional_options="--whole-archive;$(DW3000APIDir)/Shared/dwt_uwb_driver/lib/libdwt_uwb_driver-m4-hfp-6.0.7.a;--no-whole-archive"
+      linker_additional_options=""
       linker_output_format="hex"
       linker_printf_fmt_level="long"
       linker_printf_fp_enabled="Double"
@@ -253,14 +253,24 @@
         </folder>
       </folder>
       <folder Name="Shared">
-        <folder Name="dwt_uwb_driver">
-          <folder Name="Inc">
-            <file file_name="../../Shared/dwt_uwb_driver/Inc/deca_device_api.h" />
-            <file file_name="../../Shared/dwt_uwb_driver/Inc/deca_interface.h" />
-            <file file_name="../../Shared/dwt_uwb_driver/Inc/deca_types.h" />
-            <file file_name="../../Shared/dwt_uwb_driver/Inc/deca_version.h" />
-          </folder>
+        <configuration
+          Name="Common"
+          gcc_all_warnings_command_line_options="-Wall;-Wextra;-Werror"
+          gcc_enable_all_warnings="Yes" />
+        <folder Name="dw3000">
+          <file file_name="$(DW3000APIDir)/Shared/dwt_uwb_driver/dw3000/dw3000_device.c" />
         </folder>
+        <folder Name="dw3720">
+          <file file_name="$(DW3000APIDir)/Shared/dwt_uwb_driver/deca_interface.c" />
+          <file file_name="$(DW3000APIDir)/Shared/dwt_uwb_driver/dw3720/dw3720_device.c" />
+        </folder>
+        <folder Name="qmath">
+          <file file_name="../../Shared/dwt_uwb_driver/lib/qmath/src/qmath.c" />
+          <file file_name="../../Shared/dwt_uwb_driver/lib/qmath/include/qmath.h" />
+        </folder>
+        <file file_name="$(DW3000APIDir)/Shared/dwt_uwb_driver/deca_compat.c" />
+        <file file_name="../../Shared/dwt_uwb_driver/deca_rsl.c" />
+        <file file_name="../../Shared/dwt_uwb_driver/deca_rsl.h" />
       </folder>
     </folder>
     <folder Name="System">

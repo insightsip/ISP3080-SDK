@@ -6,13 +6,11 @@
  *           period set to approx. 1s. Every second host count of timer events is printed.
  *           Every 20 seconds both host count and DW count of timer event is printed.
  *
- * @attention
+ * @author Decawave
  *
- * Copyright 2020 - 2021 (c) Qorvo Ltd, Dublin, Ireland.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
- * All rights reserved.
- *
- * @author Qorvo
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -43,6 +41,8 @@ int timer_example(void)
     uint32_t dev_id;
     dwt_timer_cfg_t timer_cfg;
 
+    dwt_callbacks_s cbs = {NULL};
+
     timer_cfg.timer = DWT_TIMER0;
     timer_cfg.timer_div = DWT_XTAL_DIV64; // timer freq is 19.2 MHz
     timer_cfg.timer_mode = DWT_TIM_REPEAT;
@@ -52,14 +52,14 @@ int timer_example(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3700 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
     /* Target specific drive of RSTn line into DW IC low for a period. */
     reset_DWIC();
 
-    /* Time needed for DW3000 to start up
+    /* Time needed for DW3700 to start up
      * (transition from INIT_RC to IDLE_RC) */
     Sleep(2);
 
@@ -83,8 +83,11 @@ int timer_example(void)
         while (1) { };
     }
 
+    /* Define all the callback functions that will be called by the DW IC driver as a result of DW IC events. */
+    cbs.cbSPIRdy = timer_cb;
+
     /* Register the call-backs (only SPI ready callback is used). */
-    dwt_setcallbacks(NULL, NULL, NULL, NULL, NULL, &timer_cb, NULL);
+    dwt_setcallbacks(&cbs);
 
     /* Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and RX errors). */
     dwt_setinterrupt(DWT_INT_TIMER0_BIT_MASK, 0, DWT_ENABLE_INT);

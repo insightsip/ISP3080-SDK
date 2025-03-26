@@ -1,12 +1,11 @@
 /*! ----------------------------------------------------------------------------
- * @file    shared_functions.h
+ * @file    shared_functions.c
  * @brief   Global functions are found here
  *
- * @attention
+ * @author Decawave
  *
- * Copyright 2013 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
  */
 
@@ -481,7 +480,7 @@ uint64_t get_rx_timestamp_u64(void)
     uint8_t ts_tab[5];
     uint64_t ts = 0;
     int8_t i;
-    dwt_readrxtimestamp(ts_tab);
+    dwt_readrxtimestamp(ts_tab, 0);
     for (i = 4; i >= 0; i--)
     {
         ts <<= 8;
@@ -576,7 +575,7 @@ void resp_msg_set_ts(uint8_t *ts_field, const uint64_t ts)
  *                                                                                          and no reception errors.
  *               SYS_STATUS_RXFR_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_ND_RX_ERR - Wait for packet to be received and no receive timeout errors
  *                                                                                            and no reception errors.
- *                                                                                            These flags are useful when polling for STS Mode 4 (no data)
+ *                                                                                            These flags are useful when polling for STS Mode 3 (no data)
  *                                                                                            packets.
  *               0 - The function will not wait for any bits in the system status register (lower 32 bits).
  * @param hi_mask - a uint32 mask value that is used to check for certain bits to be set in the system status register (higher 32 bits).

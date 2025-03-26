@@ -2,13 +2,11 @@
  *  @file    simple_tx_sts_sdc.c
  *  @brief   Simple TX example code that utilises the STS with deterministic code
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -27,7 +25,7 @@ extern void test_run_info(unsigned char *data);
 /* Example application name */
 #define APP_NAME "TX 4Z STS v1.0"
 
-/* Default communication configuration. We use default non-STS DW mode. */
+/* Default communication configuration. We use STS with SDC DW mode.*/
 static dwt_config_t config = {
     5,               /* Channel number. */
     DWT_PLEN_128,    /* Preamble length. Used in TX only. */
@@ -39,7 +37,7 @@ static dwt_config_t config = {
     DWT_PHRMODE_STD, /* PHY header mode. */
     DWT_PHRRATE_STD, /* PHY header rate. */
     (129 + 8 - 8),   /* SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only. */
-    DWT_STS_MODE_1 | DWT_STS_MODE_SDC, /* Use STS. See NOTE 5 & 6 below. */
+    DWT_STS_MODE_1 | DWT_STS_MODE_SDC, /* Use STS. See NOTE 4 & 5 below. */
     DWT_STS_LEN_64,                    /* STS length see allowed values in Enum dwt_sts_lengths_e */
     DWT_PDOA_M0                        /* PDOA mode off */
 };
@@ -59,10 +57,10 @@ static dwt_config_t config = {
  *       - bits 12-13: Frame Version: 00 - Using IEEE Std 802.15.4-2003 frames
  *       - bits 14-15: Source Addressing Mode: 10 - Include source address in frame
  *     - byte 2: sequence number, incremented for each new frame.
- *     - byte 3/4: PAN ID (0xDECA)
+ *     - byte 3/4: PAN ID (0xDECA) 
  *     - byte 5/6: destination address, see NOTE 8 below.
- *     - byte 7/8: source address, see NOTE 8 below.
- *     - byte 9 to 24: MAC payload, see NOTE 7 below.
+ *     - byte 7/8: source address, see NOTE 7 below.
+ *     - byte 9 to 24: MAC payload, see NOTE 6 below.
  *     - byte 25/26: frame check-sum, automatically set by DW IC. */
 static uint8_t tx_msg[] = { 0x41, 0x88, 0, 0xCA, 0xDE, 'X', 'R', 'X', 'T', 'D', 'A', 'T', 'A', 0, 0 };
 /* Index to access the sequence number of the data frame in the tx_msg array. */
@@ -75,7 +73,7 @@ static uint8_t tx_msg[] = { 0x41, 0x88, 0, 0xCA, 0xDE, 'X', 'R', 'X', 'T', 'D', 
 #define TX_DELAY_MS 500
 
 /* Values for the PG_DELAY and TX_POWER registers reflect the bandwidth and power of the spectrum at the current
- * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 2 below. */
+ * temperature. These values can be calibrated prior to taking reference measurements. See NOTE 1 below. */
 extern dwt_txconfig_t txconfig_options;
 
 /**
@@ -86,7 +84,7 @@ int simple_tx_sts_sdc(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -108,7 +106,7 @@ int simple_tx_sts_sdc(void)
     /* Enabling LEDs here for debug so that for each TX the D1 LED will flash on DW3000 red eval-shield boards. */
     dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
-    /* Configure DW IC. See NOTE 9 below. */
+    /* Configure DW IC. See NOTE 8 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -125,7 +123,7 @@ int simple_tx_sts_sdc(void)
     /* Loop forever sending frames periodically. */
     while (1)
     {
-        /* Write frame data to DW IC and prepare transmission. See NOTE 3 below.*/
+        /* Write frame data to DW IC and prepare transmission. See NOTE 2 below.*/
         dwt_writetxdata(FRAME_LENGTH - FCS_LEN, tx_msg, 0); /* Zero offset in TX buffer. */
 
         /*
@@ -137,7 +135,7 @@ int simple_tx_sts_sdc(void)
 
         /* Start transmission. */
         dwt_starttx(DWT_START_TX_IMMEDIATE);
-        /* Poll DW IC until TX frame sent event set. See NOTE 4 below.
+        /* Poll DW IC until TX frame sent event set. See NOTE 3 below.
          * STATUS register is 4 bytes long but, as the event we are looking at is in the first byte of the register, we can use this simplest API
          * function to access it.*/
         waitforsysstatus(NULL, NULL, DWT_INT_TXFRS_BIT_MASK, 0);
@@ -157,20 +155,16 @@ int simple_tx_sts_sdc(void)
 /*****************************************************************************************************************************************************
  * NOTES:
  *
- * 1. The device ID is a hard coded constant in the blink to keep the example simple but for a real product every device should have a unique ID.
- *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the
- *    DW IC during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that
- *    customers buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
- * 2. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
+ * 1. In a real application, for optimum performance within regulatory limits, it may be necessary to set TX pulse bandwidth and TX power, (using
  *    the dwt_configuretxrf API call) to per device calibrated values saved in the target system or the DW IC OTP memory.
- * 3. dwt_writetxdata() takes the full size of tx_msg as a parameter but only copies (size - 2) bytes as the check-sum at the end of the frame is
+ * 2. dwt_writetxdata() takes the full size of tx_msg as a parameter but only copies (size - 2) bytes as the check-sum at the end of the frame is
  *    automatically appended by the DW IC. This means that our tx_msg could be two bytes shorter without losing any data (but the sizeof would not
  *    work anymore then as we would still have to indicate the full length of the frame to dwt_writetxdata()).
- * 4. We use polled mode of operation here to keep the example as simple as possible but the TXFRS status event can be used to generate an interrupt.
+ * 3. We use polled mode of operation here to keep the example as simple as possible but the TXFRS status event can be used to generate an interrupt.
  *    Please refer to DW IC User Manual for more details on "interrupts".
- * 5. This example code functions in the same manner as the simple_tx.c test code, however it uses the STS that was introduced in IEEE 802.15.4z
- * 6. Since this example is using the STS, it will be using one of the newer frame formats that were introduced in IEEE 802.15.4z.
- *    It will use packet configuration 2 which looks like so:
+ * 4. This example code functions in the same manner as the simple_tx.c test code, however it uses the STS that was introduced in IEEE 802.15.4z
+ * 5. Since this example is using the STS, it will be using one of the newer frame formats that were introduced in IEEE 802.15.4z.
+ *    It will use packet configuration 1 which looks like so:
  *    ---------------------------------------------------
  *    | Ipatov Preamble | SFD | STS | PHR | PHY Payload |
  *    ---------------------------------------------------
@@ -179,7 +173,7 @@ int simple_tx_sts_sdc(void)
  *    However, it is useful to illustrate how a transmitter and receiver will work with one and other at a basic level using the STS.
  *    Also the STS will be using deterministic code thus the receiver will stay in sync with transmitter even in case of missed frames/errored frames.
  *    There are more realistic examples in the code base that utilise STS, ranging and encrypted data payloads for a more complete solution.
- * 7. The frames used here are Decawave specific ranging frames, complying with the IEEE 802.15.4 standard data frame encoding. The frames are the
+ * 6. The frames used here are Decawave specific ranging frames, complying with the IEEE 802.15.4 standard data frame encoding. The frames are the
  *    following:
  *     - a poll message sent by the initiator to trigger the ranging exchange.
  *     - a response message sent by the responder to complete the exchange and provide all information needed by the initiator to compute the
@@ -188,8 +182,8 @@ int simple_tx_sts_sdc(void)
  *     - byte 0/1: frame control (0x8841 to indicate a data frame using 16-bit addressing).
  *     - byte 2: sequence number, incremented for each new frame.
  *     - byte 3/4: PAN ID (0xDECA).
- *     - byte 5/6: destination address, see NOTE 4 below.
- *     - byte 7/8: source address, see NOTE 4 below.
+ *     - byte 5/6: destination address, see NOTE 7 below.
+ *     - byte 7/8: source address, see NOTE 7 below.
  *     - byte 9: function code (specific values to indicate which message it is in the ranging process).
  *    The remaining bytes are specific to each message as follows:
  *    Poll message:
@@ -197,10 +191,10 @@ int simple_tx_sts_sdc(void)
  *    Response message:
  *     - byte 0 -> 13: poll message reception timestamp.
  *     - byte 4 -> 17: response message transmission timestamp.
- * 8. Source and destination addresses are hard coded constants to keep the example simple but for a real product every device should have a unique ID.
+ * 7. Source and destination addresses are hard coded constants to keep the example simple but for a real product every device should have a unique ID.
  *    For development purposes it is possible to generate a DW IC unique ID by combining the Lot ID & Part Number values programmed into the DW IC
- *    during its manufacture. However there is no guarantee this will not conflict with someone else’s implementation. We recommended that customers
+ *    during its manufacture. However there is no guarantee this will not conflict with someone else's implementation. We recommended that customers
  *    buy a block of addresses from the IEEE Registration Authority for their production items. See "EUI" in the DW IC User Manual.
- * 9. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ * 8. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
  *    configuration.
  ****************************************************************************************************************************************************/

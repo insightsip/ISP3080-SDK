@@ -2,13 +2,11 @@
  *  @file    simple_rx_aes.c
  *  @brief   Simple RX + AES example code
  *
- * @attention
- *
- * Copyright 2018 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -108,7 +106,7 @@ int simple_rx_aes(void)
         while (TRUE) { };
     }
 
-    /* Configure DW3000. */
+    /* Configure DW IC. See NOTE 1 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
     if (dwt_configure(&config))
     {
@@ -116,8 +114,8 @@ int simple_rx_aes(void)
         while (1) { };
     }
 
-    dwt_set_keyreg_128(&aes_key);
-    dwt_configure_aes(&aes_config);
+    dwt_set_keyreg_128((dwt_aes_key_t *)&aes_key);
+    dwt_configure_aes((dwt_aes_config_t *)&aes_config);
 
     aes_job.src_port = AES_Src_Rx_buf_0; /* Take encrypted frame from the RX buffer */
     aes_job.dst_port = AES_Dst_Rx_buf_0; /* Decrypt the frame to the same RX buffer : this will destroy original RX frame */
@@ -129,13 +127,15 @@ int simple_rx_aes(void)
         /* Activate reception immediately. See NOTE 2 below. */
         dwt_rxenable(DWT_START_RX_IMMEDIATE);
 
-        /* Poll until a frame is properly received or an error/timeout occurs.*/
+        /* Poll until a frame is properly received or an error/timeout occurs. See NOTE 3 below.
+         * STATUS register is 5 bytes long but, as the event we are looking at is in the first byte of the register, we can use this simplest API
+         * function to access it. */
         waitforsysstatus(&status_reg, NULL, (DWT_INT_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_ERR), 0);
 
         if (status_reg & DWT_INT_RXFCG_BIT_MASK)
         {
             uint16_t finfo16;
-            finfo16 = dwt_getframelength();
+            finfo16 = dwt_getframelength(0);
 
             /* Decrypt received packet */
             aes_results = rx_aes_802_15_8((finfo16 & RX_BUFFER_MAX_LEN), &aes_job, payload, sizeof(payload), aes_config.aes_core_type);
@@ -179,7 +179,12 @@ int simple_rx_aes(void)
 
 /*****************************************************************************************************************************************************
  * NOTES:
- *
+ * 1. Desired configuration by user may be different to the current programmed configuration. dwt_configure is called to set desired
+ *    configuration.
+ * 2. Manual reception activation is performed here but DW IC offers several features that can be used to handle more complex scenarios or to
+ *    optimise system's overall performance (e.g. timeout after a given time, automatic re-enabling of reception in case of errors, etc.).
+ * 3. We use polled mode of operation here to keep the example as simple as possible, but RXFCG and error/timeout status events can be used to generate
+ *    interrupts. Please refer to DW IC User Manual for more details on "interrupts".
+ * 
  * TODO: Correct and/or required notes for this example can be added later.
- *
  ****************************************************************************************************************************************************/

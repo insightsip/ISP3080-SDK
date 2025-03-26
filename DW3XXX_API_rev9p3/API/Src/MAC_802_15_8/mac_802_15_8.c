@@ -1,3 +1,13 @@
+/*! ----------------------------------------------------------------------------
+ * @file    mac_802_15_8.c
+ * @brief   Functions that handle 802.15.8 frame
+ *
+ * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
+ */
 #include <mac_802_15_8.h>
 #include <string.h>
 
@@ -40,6 +50,7 @@ aes_results_e rx_aes_802_15_8(uint16_t frame_length, dwt_aes_job_t *aes_job, uin
         aes_job->payload_len = payload_len;
         aes_job->header = NULL;
         aes_job->payload = payload;
+        // dwt_configure_aes(aes_job);
         status = dwt_do_aes(aes_job, core_type); // After this command, payload will contain the received data
 
         /* "status" represents a last read of AES_STS_ID register.

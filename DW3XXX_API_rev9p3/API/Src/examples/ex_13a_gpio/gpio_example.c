@@ -4,13 +4,11 @@
  *           outputs. It also demonstrates how to drive the output to turn
  *           on/off LEDs on DW3000 HW.
  *
- * @attention
- *
- * Copyright 2017 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 #include "deca_probe_interface.h"
 #include <deca_device_api.h>
@@ -44,7 +42,7 @@ int gpio_example(void)
     /* Display application name on LCD. */
     test_run_info((unsigned char *)APP_NAME);
 
-    /* Configure SPI rate, DW3000 supports up to 36 MHz */
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
     port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
@@ -108,6 +106,7 @@ int gpio_example(void)
             blink_delay = SLOW_BLINK;
         }
 
+        /* See NOTE 3 below. */
         /* Set GPIO2 and GPIO3 high */
         /* This will turn D1 (Green LED) and D2 (Red LED) on */
         dwt_setgpiovalue(GPIO3_BIT_MASK | GPIO2_BIT_MASK, 1);

@@ -2,11 +2,10 @@
  * @file    shared_defines.h
  * @brief   Global definitions are found here
  *
- * @attention
+ * @author Decawave
  *
- * Copyright 2013 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
  *
  */
 
@@ -33,7 +32,7 @@ extern "C"
 #define FINAL_MSG_TS_LEN 4
 
 /* UWB microsecond (uus) to device time unit (dtu, around 15.65 ps) conversion factor.
- * 1 uus = 512 / 499.2 µs and 1 µs = 499.2 * 128 dtu. */
+ * 1 uus = 512 / 499.2 s and 1 s = 499.2 * 128 dtu. */
 #define UUS_TO_DWT_TIME 63898
 
 #define TX_CHANGEABLE_DATA  (10) /*Can change the length of TX data by this size*/

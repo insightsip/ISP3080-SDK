@@ -4,13 +4,11 @@
  *           The transmitter should be simple_tx_pdoa.c
  *           See note 3 regarding calibration and offset
  *
- * @attention
- *
- * Copyright 2019 - 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -30,7 +28,11 @@ static void rx_err_cb(const dwt_cb_data_t *cb_data);
 /* Example application name and version to display on LCD screen. */
 #define APP_NAME "PDOA example"
 
-/* Default communication configuration. We use default non-STS DW mode. see note 2*/
+#define USE_SPI2 0 // set this to 1 to use DW37X0 SPI2
+
+#define PI  3.14159265358979f
+
+/* Default communication configuration. We use STS with SDC DW mode. See NOTE 2*/
 static dwt_config_t config = {
     5,               /* Channel number. */
     DWT_PLEN_128,    /* Preamble length. Used in TX only. */
@@ -55,8 +57,14 @@ uint8_t pdoa_message_data[40]; // Will hold the data to send to the virtual COM
  */
 int simple_rx_pdoa(void)
 {
+#if USE_SPI2
+    uint8_t sema_res;
+#endif
     uint32_t dev_id;
     int16_t last_pdoa_val = 0;
+    float degrees = 0;
+
+    dwt_callbacks_s cbs = {NULL};
 
     /* Sends application name to test_run_info function. */
     test_run_info((unsigned char *)APP_NAME);
@@ -72,6 +80,36 @@ int simple_rx_pdoa(void)
     dwt_probe((struct dwt_probe_s *)&dw3000_probe_interf);
 
     dev_id = dwt_readdevid();
+    if (dev_id == (uint32_t)DWT_DW3720_PDOA_DEV_ID)
+    {
+        /* If host is using SPI 2 to connect to DW3000 the code in the USE_SPI2 above should be set to 1 */
+#if USE_SPI2
+        change_SPI(SPI_2);
+
+        /* Configure SPI rate, DW3000 supports up to 38 MHz */
+        port_set_dw_ic_spi_fastrate();
+
+        /* Reset DW IC */
+        reset_DWIC(); /* Target specific drive of RSTn line into DW IC low for a period. */
+
+        Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)
+
+        /* If host is using SPI 2 to connect to DW3000 the it needs to request access or force access */
+
+        sema_res = dwt_ds_sema_status();
+
+        if ((sema_res & (0x2)) == 0) // the SPI2 is free
+        {
+            dwt_ds_sema_request();
+        }
+        else
+        {
+            test_run_info((unsigned char *)"SPI2 IS NOT FREE"); // If SPI2 is not free the host can force access
+            while (1) { };
+        }
+
+#endif
+    }
 
     while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */ { };
 
@@ -89,8 +127,13 @@ int simple_rx_pdoa(void)
         while (1) { };
     }
 
+    /* Define all the callback functions that will be called by the DW IC driver as a result of DW IC events. */
+    cbs.cbRxOk = rx_ok_cb;
+    cbs.cbRxTo = rx_err_cb;
+    cbs.cbRxErr = rx_err_cb;
+
     /* Register RX call-back. */
-    dwt_setcallbacks(NULL, rx_ok_cb, rx_err_cb, rx_err_cb, NULL, NULL, NULL);
+    dwt_setcallbacks(&cbs);
 
     /* Enable wanted interrupts (RX good frames and RX errors). */
     dwt_setinterrupt(DWT_INT_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_ERR, 0, DWT_ENABLE_INT);
@@ -110,7 +153,8 @@ int simple_rx_pdoa(void)
         if (last_pdoa_val != pdoa_val)
         {
             last_pdoa_val = pdoa_val;
-            sprintf((char *)&pdoa_message_data, "PDOA val = %d", last_pdoa_val);
+            degrees = ((float) pdoa_val / (1<<11)) * 180 / PI; // To log corresponding degrees.
+            sprintf((char *)&pdoa_message_data, "PDOA val = %d, Degrees = %f", last_pdoa_val, degrees);
             test_run_info((unsigned char *)&pdoa_message_data);
         }
     }
@@ -133,7 +177,7 @@ static void rx_ok_cb(const dwt_cb_data_t *cb_data)
 
     (void)cb_data;
     // Checking STS quality and STS status. See note 4
-    if (((goodSts = dwt_readstsquality(&stsQual)) >= 0))
+    if (((goodSts = dwt_readstsquality(&stsQual, 0)) >= 0))
     {
         pdoa_val = dwt_readpdoa();
     }

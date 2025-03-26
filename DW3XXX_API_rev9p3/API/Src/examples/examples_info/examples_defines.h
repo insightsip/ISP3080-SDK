@@ -1,3 +1,13 @@
+/*! ----------------------------------------------------------------------------
+ * @file    example_defines.h
+ * @brief
+ *
+ * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
+ */
 #ifndef TESTS_DEFINES_
 #define TESTS_DEFINES_
 

@@ -1,3 +1,13 @@
+/*! ----------------------------------------------------------------------------
+ * @file    shared_functions.h
+ * @brief   Global functions are found here
+ *
+ * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
+ */
 #ifndef _SHARE_FUNC_
 #define _SHARE_FUNC_
 
@@ -192,7 +202,7 @@ extern "C"
      *                                                                                          and no reception errors.
      *               SYS_STATUS_RXFR_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_ND_RX_ERR - Wait for packet to be received and no receive timeout errors
      *                                                                                            and no reception errors.
-     *                                                                                            These flags are useful when polling for STS Mode 4 (no data)
+     *                                                                                            These flags are useful when polling for STS Mode 3 (no data)
      *                                                                                            packets.
      *               0 - The function will not wait for any bits in the system status register (lower 32 bits).
      * @param hi_mask - a uint32 mask value that is used to check for certain bits to be set in the system status register (higher 32 bits).

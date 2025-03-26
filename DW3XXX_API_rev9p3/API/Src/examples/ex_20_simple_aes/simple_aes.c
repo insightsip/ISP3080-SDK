@@ -20,11 +20,11 @@
  *           decrypt is the same as the key used to encrypt the decrypted data should be the
  *           same as the original payload.
  *
- * Copyright 2021 (c) Decawave Ltd, Dublin, Ireland.
- *
- * All rights reserved.
- *
  * @author Decawave
+ *
+ * @copyright SPDX-FileCopyrightText: Copyright (c) 2024 Qorvo US, Inc.
+ *            SPDX-License-Identifier: LicenseRef-QORVO-2
+ *
  */
 
 #include "deca_probe_interface.h"
@@ -107,7 +107,7 @@ int simple_aes()
     }
 
     /* Encryption */
-    dwt_set_keyreg_128(&aes_key_tx);
+    dwt_set_keyreg_128((dwt_aes_key_t *)&aes_key_tx);
     tx_aes_job.nonce = nonce;                   /* use constructed nonce to encrypt payload */
     tx_aes_job.header = (uint8_t *)&MAC_header; /* plain-text header which will not be encrypted */
     tx_aes_job.header_len = sizeof(MAC_header);
@@ -161,7 +161,7 @@ int simple_aes()
     rx_aes_job.mode = AES_Decrypt;
     rx_aes_job.mic_size = 16; /*MIC == 128 */
 
-    dwt_set_keyreg_128(&aes_key_rx);
+    dwt_set_keyreg_128((dwt_aes_key_t *)&aes_key_rx);
     aes_config_z.mode = AES_Decrypt;
     dwt_configure_aes(&aes_config_z);
 
