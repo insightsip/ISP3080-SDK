@@ -494,13 +494,13 @@ uint32_t drv_uwb_range_init(drv_uwb_range_init_t *p_params) {
 
     // Configure antenna delays
     if (channel == 5) {
-        rx_ant_dly = otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL? (otp_memory[OTP_CH5_ANT_DLY_ADDR] >> 16) & 0xFFFF : DEFAULT_RX_ANT_DLY;
-        tx_ant_dly = otp_memory[OTP_CH5_ANT_DLY_ADDR] != EMPTY_OTP_VAL? otp_memory[OTP_CH5_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_TX_ANT_DLY;
+		rx_ant_dly = otp_memory[OTP_CH5_RX_ANT_DLY_ADDR] != EMPTY_OTP_VAL ? otp_memory[OTP_CH5_RX_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_RX_ANT_DLY;
+		tx_ant_dly = otp_memory[OTP_CH5_TX_ANT_DLY_ADDR] != EMPTY_OTP_VAL ? otp_memory[OTP_CH5_TX_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_TX_ANT_DLY;
         dwt_setrxantennadelay(rx_ant_dly);
         dwt_settxantennadelay(tx_ant_dly);
     } else if (channel == 9) {
-        rx_ant_dly = otp_memory[OTP_CH9_ANT_DLY_ADDR] != EMPTY_OTP_VAL? (otp_memory[OTP_CH9_ANT_DLY_ADDR] >> 16) & 0xFFFF : DEFAULT_RX_ANT_DLY;
-        tx_ant_dly = otp_memory[OTP_CH9_ANT_DLY_ADDR] != EMPTY_OTP_VAL? otp_memory[OTP_CH9_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_TX_ANT_DLY;
+		rx_ant_dly = otp_memory[OTP_CH9_RX_ANT_DLY_ADDR] != EMPTY_OTP_VAL ? otp_memory[OTP_CH9_RX_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_RX_ANT_DLY;
+		tx_ant_dly = otp_memory[OTP_CH9_TX_ANT_DLY_ADDR] != EMPTY_OTP_VAL ? otp_memory[OTP_CH9_TX_ANT_DLY_ADDR] & 0xFFFF : DEFAULT_TX_ANT_DLY;
         dwt_setrxantennadelay(rx_ant_dly);
         dwt_settxantennadelay(tx_ant_dly);
     } else {
